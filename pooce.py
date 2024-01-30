@@ -1,34 +1,26 @@
-# https://github.com/Flashs/virtualvideo
-# https://github.com/umlaeute/v4l2loopback
-# sudo apt install v4l2loopback-utils
-# sudo modprobe v4l2loopback video_nr=2 exclusive_caps=1
-
 import virtualvideo
 import cv2
 
 
 class MyVideoSource(virtualvideo.VideoSource):
     def __init__(self):
-        self.img = cv2.imread("fish.jpg")
-        size = self.img.shape
+        width = 800
+        height = 600
+        self.output_rect = (height, width)
 
-        # opencv's shape is y,x,channels
-        self._size = (size[1], size[0])
+        self.videoInputOriginal = cv2.VideoCapture(0)
 
     def img_size(self):
-        return self._size
+        return self.output_rect
 
     def fps(self):
         return 10
 
     def generator(self):
         while True:
-            for i in range(1, 100, 2):
-                # processes the image a little bit
-                x = abs(50 - i)
-                # yield cv2.blur(self.img, (x, x))
-                self.img[100:100, 100:100] = (255, 0, 0)
-                yield self.img
+            _rval, frame = self.videoInputOriginal.read()
+            frame_resized = cv2.resize(frame, self.output_rect)
+            yield frame_resized
 
 
 vidsrc = MyVideoSource()
