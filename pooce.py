@@ -1,6 +1,8 @@
 import virtualvideo
 import cv2
 import random
+import select
+import sys
 
 OUT_WIDTH = 800
 OUT_HEIGHT = 600
@@ -30,7 +32,41 @@ class StaticTextRenderPass(OutputRenderPass):
 
     def render(self, img):
         # TODO: Hflip.
-        return cv2.putText(
+        img = cv2.flip(img, 1)
+
+        cv2.putText(
+            img,
+            self.text,
+            (50, OUT_HEIGHT - 100),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (255, 255, 255),
+            2,
+            cv2.LINE_AA,
+        )
+
+        return cv2.flip(img, 1)
+
+
+class TypingTextRenderPass(OutputRenderPass):
+    def __init__(self):
+        self.text = ""
+
+    def render(self, img):
+        if select.select(
+            [
+                sys.stdin,
+            ],
+            [],
+            [],
+            0.0,
+        )[0]:
+            line = sys.stdin.readline()
+            self.text += line
+
+        img = cv2.flip(img, 1)
+
+        cv2.putText(
             img,
             self.text,
             (50, 50),
@@ -40,6 +76,8 @@ class StaticTextRenderPass(OutputRenderPass):
             2,
             cv2.LINE_AA,
         )
+
+        return cv2.flip(img, 1)
 
 
 class VideoProxy(virtualvideo.VideoSource):
@@ -51,6 +89,7 @@ class VideoProxy(virtualvideo.VideoSource):
         self.output_render_passes = [
             RandomFlashRenderPass(),
             StaticTextRenderPass("Pooce Demo v0"),
+            TypingTextRenderPass(),
         ]
 
     def img_size(self):
