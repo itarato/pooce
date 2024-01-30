@@ -24,13 +24,34 @@ class RandomFlashRenderPass(OutputRenderPass):
         return img
 
 
+class StaticTextRenderPass(OutputRenderPass):
+    def __init__(self, text):
+        self.text = text
+
+    def render(self, img):
+        # TODO: Hflip.
+        return cv2.putText(
+            img,
+            self.text,
+            (50, 50),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (255, 255, 255),
+            2,
+            cv2.LINE_AA,
+        )
+
+
 class VideoProxy(virtualvideo.VideoSource):
     def __init__(self):
         self.output_rect = (OUT_HEIGHT, OUT_WIDTH)
 
         self.videoInputOriginal = cv2.VideoCapture(0)
 
-        self.output_render_passes = [RandomFlashRenderPass()]
+        self.output_render_passes = [
+            RandomFlashRenderPass(),
+            StaticTextRenderPass("Pooce Demo v0"),
+        ]
 
     def img_size(self):
         return self.output_rect
