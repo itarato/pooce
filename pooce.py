@@ -50,7 +50,7 @@ class StaticTextRenderPass(OutputRenderPass):
 
 class TypingTextRenderPass(OutputRenderPass):
     def __init__(self):
-        self.text = ""
+        self.texts = []
 
     def render(self, img):
         if select.select(
@@ -62,20 +62,21 @@ class TypingTextRenderPass(OutputRenderPass):
             0.0,
         )[0]:
             line = sys.stdin.readline()
-            self.text += line
+            self.texts.append(line.strip())
 
         img = cv2.flip(img, 1)
 
-        cv2.putText(
-            img,
-            self.text,
-            (50, 50),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            (255, 255, 255),
-            2,
-            cv2.LINE_AA,
-        )
+        for i, text in enumerate(self.texts):
+            cv2.putText(
+                img,
+                text,
+                (50, 25 + (i * 50)),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (255, 255, 255),
+                2,
+                cv2.LINE_AA,
+            )
 
         return cv2.flip(img, 1)
 
