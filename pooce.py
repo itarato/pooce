@@ -4,13 +4,37 @@ import random
 import select
 import sys
 
-OUT_WIDTH = 800
-OUT_HEIGHT = 600
+OUT_WIDTH = 1280
+OUT_HEIGHT = 720
 
 
 class OutputRenderPass:
     def render(self, img):
         NotImplementedError("Must be implemented")
+
+
+class PongRenderPass(OutputRenderPass):
+    def __init__(self):
+        self.x = 10
+        self.y = 10
+        self.size = 8
+        self.vx = 15
+        self.vy = 15
+
+    def render(self, img):
+        x_candidate = self.x + self.vx
+        y_candidate = self.y + self.vy
+
+        if x_candidate < 0 or x_candidate > OUT_WIDTH:
+            self.vx *= -1
+
+        if y_candidate < 0 or y_candidate > OUT_HEIGHT:
+            self.vy *= -1
+
+        self.x += self.vx
+        self.y += self.vy
+
+        return cv2.circle(img, (self.x, self.y), self.size, (100, 255, 100), 8)
 
 
 class RandomFlashRenderPass(OutputRenderPass):
@@ -91,6 +115,7 @@ class VideoProxy(virtualvideo.VideoSource):
             RandomFlashRenderPass(),
             StaticTextRenderPass("Pooce Demo v0"),
             TypingTextRenderPass(),
+            PongRenderPass(),
         ]
 
     def img_size(self):
@@ -112,5 +137,5 @@ class VideoProxy(virtualvideo.VideoSource):
 
 video_device = virtualvideo.FakeVideoDevice()
 video_device.init_input(VideoProxy())
-video_device.init_output(2, 1280, 720, fps=30)
+video_device.init_output(2, OUT_WIDTH, OUT_HEIGHT, fps=30)
 video_device.run()
