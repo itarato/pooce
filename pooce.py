@@ -232,7 +232,17 @@ class ShellWatcherRenderPass(OutputRenderPass):
             cv2.putText(
                 img,
                 line,
-                (self.x, self.y + (i * 30)),
+                (self.x, self.y + (i * 35)),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                COLOR_BLACK,
+                4,
+                cv2.LINE_AA,
+            )
+            cv2.putText(
+                img,
+                line,
+                (self.x, self.y + (i * 35)),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 1,
                 COLOR_WHITE,
@@ -465,6 +475,7 @@ class VideoProxy(virtualvideo.VideoSource):
             PongRenderPass(),  # 5
             ShellWatcherRenderPass(["vmstat"], 10, 8),  # 6
             MouseDrawRenderPass(),  # 7
+            ShellWatcherRenderPass(["cat", "experiment/notepad.txt"], 10, 300, 30),  # 8
         ]
 
         self.__control_window = ControlWindow(self.event_queue)
