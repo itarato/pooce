@@ -137,8 +137,8 @@ class PongRenderPass(OutputRenderPass):
         img = cv2.flip(img, 1)
         cv2.putText(
             img,
-            str(self.score),
-            (OUT_WIDTH - self.bat_x, OUT_HEIGHT - 8),
+            "Score: " + str(self.score),
+            (OUT_WIDTH - self.bat_x - (self.bat_size >> 1), OUT_HEIGHT - 6),
             cv2.FONT_HERSHEY_SIMPLEX,
             1,
             COLOR_BLACK,
