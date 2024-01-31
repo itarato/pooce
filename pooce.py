@@ -8,6 +8,14 @@ import numpy
 OUT_WIDTH = 1280
 OUT_HEIGHT = 720
 
+IN_VIDEO_DEVICE_ID = 0
+OUT_VIDEO_DEVICE_ID = 2
+
+COLOR_BLACK = (0, 0, 0)
+COLOR_GREEN = (0, 255, 0)
+COLOR_BLUE = (255, 0, 0)
+COLOR_WHITE = (255, 255, 255)
+
 
 class OutputRenderPass:
     def render(self, img):
@@ -35,7 +43,7 @@ class PongRenderPass(OutputRenderPass):
         self.x += self.vx
         self.y += self.vy
 
-        return cv2.circle(img, (self.x, self.y), self.size, (100, 255, 100), -1)
+        return cv2.circle(img, (self.x, self.y), self.size, COLOR_GREEN, -1)
 
 
 class RandomFlashRenderPass(OutputRenderPass):
@@ -51,7 +59,7 @@ class RandomFlashRenderPass(OutputRenderPass):
             if y >= OUT_HEIGHT:
                 continue
             self.drops[x] += self.speed
-            img[y : (y + 20), x : (x + 10)] = (255, 0, 0)
+            img[y : (y + 20), x : (x + 10)] = COLOR_BLUE
 
         return img
 
@@ -70,7 +78,7 @@ class StaticTextRenderPass(OutputRenderPass):
             (8, OUT_HEIGHT - 8),
             cv2.FONT_HERSHEY_SIMPLEX,
             1,
-            (255, 255, 255),
+            COLOR_WHITE,
             2,
             cv2.LINE_AA,
         )
@@ -91,8 +99,12 @@ class TypingTextRenderPass(OutputRenderPass):
             [],
             0.0,
         )[0]:
-            line = sys.stdin.readline()
-            self.texts.append(line.strip())
+            line = sys.stdin.readline().strip()
+
+            if line == "/clear":
+                self.texts.clear()
+            else:
+                self.texts.append(line)
 
         img = cv2.flip(img, 1)
 
@@ -103,7 +115,17 @@ class TypingTextRenderPass(OutputRenderPass):
                 (8, 25 + (i * 30)),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 1,
-                (255, 255, 255),
+                COLOR_BLACK,
+                4,
+                cv2.LINE_AA,
+            )
+            cv2.putText(
+                img,
+                text,
+                (8, 25 + (i * 30)),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                COLOR_WHITE,
                 2,
                 cv2.LINE_AA,
             )
@@ -158,13 +180,13 @@ class VideoProxy(virtualvideo.VideoSource):
     def __init__(self):
         self.output_rect = (OUT_WIDTH, OUT_HEIGHT)
 
-        self.videoInputOriginal = cv2.VideoCapture(0)
+        self.videoInputOriginal = cv2.VideoCapture(IN_VIDEO_DEVICE_ID)
 
         self.output_render_passes = [
             RandomFlashRenderPass(),
             StaticTextRenderPass("Pooce Demo v0"),
-            # TypingTextRenderPass(),
-            # PongRenderPass(),
+            TypingTextRenderPass(),
+            PongRenderPass(),
             # CarDrawRenderPass(),
         ]
 
@@ -187,5 +209,5 @@ class VideoProxy(virtualvideo.VideoSource):
 
 video_device = virtualvideo.FakeVideoDevice()
 video_device.init_input(VideoProxy())
-video_device.init_output(2, OUT_WIDTH, OUT_HEIGHT, fps=30)
+video_device.init_output(OUT_VIDEO_DEVICE_ID, OUT_WIDTH, OUT_HEIGHT, fps=30)
 video_device.run()
