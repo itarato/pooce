@@ -39,7 +39,7 @@ class SimpleDotDrawer(DotDrawer):
         for y in range(OUT_HEIGHT):
             for x in range(OUT_WIDTH):
                 if self.map[(y * OUT_WIDTH) + x] > 0:
-                    cv2.circle(img, (x, y), 4, COLOR_RED, -1, cv2.LINE_AA)
+                    cv2.circle(img, (x, y), 4, COLOR_RED, -1)
 
 
 class LineDrawer(DotDrawer):
@@ -54,7 +54,7 @@ class LineDrawer(DotDrawer):
             return
 
         for i in range(len(self.sequence) - 1):
-            cv2.line(img, self.sequence[i], self.sequence[i + 1], COLOR_RED)
+            cv2.line(img, self.sequence[i], self.sequence[i + 1], COLOR_RED, 4)
 
 
 class OutputRenderPass:
