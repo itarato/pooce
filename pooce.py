@@ -51,6 +51,9 @@ OUTPUT_RENDER_PASS_MASK_ALL = -1
 # For SIGINT to signal everyone.
 global_exit_flag = False
 
+# Default background.
+background = numpy.zeros((OUT_HEIGHT, OUT_WIDTH, 3), numpy.uint8)
+
 
 def sig_interrupt_handler(sig, frame):
     global global_exit_flag
@@ -459,9 +462,9 @@ class ControlWindow:
 
     def window_thread(self):
         global global_exit_flag
+        global background
 
         cv2.namedWindow(self.window_name)
-        background = numpy.zeros((OUT_HEIGHT, OUT_WIDTH, 3), numpy.uint8)
         cv2.setMouseCallback(self.window_name, self.on_mouse_event)
 
         while not global_exit_flag:
@@ -517,11 +520,22 @@ class VideoProxy(virtualvideo.VideoSource):
 
     def generator(self):
         global global_exit_flag
+        global background
+
         output_render_pass_mask = 0  # First pass visible by default.
+        is_pip_mode = False
 
         while not global_exit_flag:
-            _rval, frame = self.videoInputOriginal.read()
-            frame_resized = cv2.resize(frame, self.output_rect)
+            _rval, default_video = self.videoInputOriginal.read()
+
+            if is_pip_mode:
+                default_video_resized = cv2.resize(
+                    default_video, (OUT_WIDTH >> 2, OUT_HEIGHT >> 2)
+                )
+                img = background.copy()
+                img[0 : (OUT_HEIGHT >> 2), 0 : (OUT_WIDTH >> 2)] = default_video_resized
+            else:
+                img = cv2.resize(default_video, (OUT_WIDTH, OUT_HEIGHT))
 
             events = []
             while self.event_queue.qsize() > 0:
@@ -534,15 +548,17 @@ class VideoProxy(virtualvideo.VideoSource):
                         output_render_pass_mask = OUTPUT_RENDER_PASS_MASK_ALL
                     elif key_code >= 48 and key_code <= 57:  # Key: 0..9
                         output_render_pass_mask = key_code - 48
+                    elif key_code == 112:  # Key: p
+                        is_pip_mode = not is_pip_mode
 
             for i, output_render_pass in enumerate(self.output_render_passes):
                 if (
                     output_render_pass_mask == OUTPUT_RENDER_PASS_MASK_ALL
                     or i == output_render_pass_mask % len(self.output_render_passes)
                 ):
-                    frame_resized = output_render_pass.render(frame_resized, events)
+                    img = output_render_pass.render(img, events)
 
-            yield frame_resized
+            yield img
 
 
 signal.signal(signal.SIGINT, sig_interrupt_handler)
