@@ -40,13 +40,18 @@ class PongRenderPass(OutputRenderPass):
 
 class RandomFlashRenderPass(OutputRenderPass):
     def __init__(self):
-        self.size = 10
+        self.drops = [OUT_HEIGHT] * OUT_WIDTH
+        self.speed = 50
 
     def render(self, img):
-        rx = random.randrange(0, OUT_WIDTH - self.size)
-        ry = random.randrange(0, OUT_HEIGHT - self.size)
+        if random.random() < 0.4:
+            self.drops[random.randrange(0, OUT_WIDTH)] = 0
 
-        img[rx : (rx + self.size), ry : (ry + self.size)] = (0, 0, 255)
+        for x, y in enumerate(self.drops):
+            if y >= OUT_HEIGHT:
+                continue
+            self.drops[x] += self.speed
+            img[y : (y + 20), x : (x + 10)] = (255, 0, 0)
 
         return img
 
@@ -62,7 +67,7 @@ class StaticTextRenderPass(OutputRenderPass):
         cv2.putText(
             img,
             self.text,
-            (50, OUT_HEIGHT - 100),
+            (8, OUT_HEIGHT - 8),
             cv2.FONT_HERSHEY_SIMPLEX,
             1,
             (255, 255, 255),
@@ -95,7 +100,7 @@ class TypingTextRenderPass(OutputRenderPass):
             cv2.putText(
                 img,
                 text,
-                (50, 25 + (i * 50)),
+                (8, 25 + (i * 30)),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 1,
                 (255, 255, 255),
@@ -158,9 +163,9 @@ class VideoProxy(virtualvideo.VideoSource):
         self.output_render_passes = [
             RandomFlashRenderPass(),
             StaticTextRenderPass("Pooce Demo v0"),
-            TypingTextRenderPass(),
-            PongRenderPass(),
-            CarDrawRenderPass(),
+            # TypingTextRenderPass(),
+            # PongRenderPass(),
+            # CarDrawRenderPass(),
         ]
 
     def img_size(self):
