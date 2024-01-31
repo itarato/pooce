@@ -6,6 +6,7 @@ import sys
 import numpy
 import subprocess
 import threading
+import queue
 
 OUT_WIDTH = 1280
 OUT_HEIGHT = 720
@@ -20,6 +21,17 @@ COLOR_WHITE = (255, 255, 255)
 COLOR_PURPLE = (255, 0, 255)
 COLOR_RED = (0, 0, 255)
 COLOR_LAGUNA_BLUE = (255, 255, 0)
+
+EVENT_MOUSE_LEFT_DOWN = 1
+EVENT_MOUSE_LEFT_UP = 2
+EVENT_MOUSE_MIDDLE_DOWN = 3
+
+
+class Event:
+    def __init__(self, mouse_pos=None, mouse_click=None, key_code=None):
+        self.mouse_pos = mouse_pos
+        self.mouse_click = mouse_click
+        self.key_code = key_code
 
 
 class DotDrawer:
@@ -70,7 +82,7 @@ class LineDrawer(DotDrawer):
 
 
 class OutputRenderPass:
-    def render(self, img):
+    def render(self, img, events):
         NotImplementedError("Must be implemented")
 
 
@@ -82,7 +94,10 @@ class PongRenderPass(OutputRenderPass):
         self.vx = 20
         self.vy = 20
 
-    def render(self, img):
+        self.bat_x = OUT_WIDTH >> 1
+        self.score = 0
+
+    def render(self, img, events):
         x_candidate = self.x + self.vx
         y_candidate = self.y + self.vy
 
@@ -95,6 +110,20 @@ class PongRenderPass(OutputRenderPass):
         self.x += self.vx
         self.y += self.vy
 
+        for event in events:
+            if event.key_code == 97:
+                self.bat_x += 20
+            elif event.key_code == 100:
+                self.bat_x -= 20
+
+        cv2.rectangle(
+            img,
+            (self.bat_x - 50, OUT_HEIGHT - 30),
+            (self.bat_x + 50, OUT_HEIGHT),
+            COLOR_GREEN,
+            -1,
+        )
+
         return cv2.circle(img, (self.x, self.y), self.size, COLOR_GREEN, -1)
 
 
@@ -103,7 +132,7 @@ class RandomFlashRenderPass(OutputRenderPass):
         self.drops = [OUT_HEIGHT] * OUT_WIDTH
         self.speed = 50
 
-    def render(self, img):
+    def render(self, img, events):
         if random.random() < 0.4:
             self.drops[random.randrange(0, OUT_WIDTH)] = 0
 
@@ -120,7 +149,7 @@ class StaticTextRenderPass(OutputRenderPass):
     def __init__(self, text):
         self.text = text
 
-    def render(self, img):
+    def render(self, img, events):
         img = cv2.flip(img, 1)
 
         cv2.putText(
@@ -148,7 +177,7 @@ class ShellWatcherRenderPass(OutputRenderPass):
         self.x = x
         self.y = y
 
-    def render(self, img):
+    def render(self, img, events):
         if self.counter >= self.frequency:
             self.counter = 0
 
@@ -181,7 +210,7 @@ class TypingTextRenderPass(OutputRenderPass):
     def __init__(self):
         self.texts = []
 
-    def render(self, img):
+    def render(self, img, events):
         if select.select(
             [
                 sys.stdin,
@@ -232,7 +261,7 @@ class CarDrawRenderPass(OutputRenderPass):
         )
         self.map = [0] * (OUT_HEIGHT * OUT_WIDTH)
 
-    def render(self, img):
+    def render(self, img, events):
         blob = cv2.dnn.blobFromImage(img, 0.007843, (300, 300), 127.5)
         h, w = img.shape[:2]
         self.net.setInput(blob)
@@ -272,7 +301,7 @@ class RedDotDrawRenderPass(OutputRenderPass):
     def __init__(self, drawer: DotDrawer):
         self.drawer = drawer
 
-    def render(self, img):
+    def render(self, img, events):
         captured_frame = img
 
         # Convert original image to BGR, since Lab is only available from BGR
@@ -314,11 +343,36 @@ class RedDotDrawRenderPass(OutputRenderPass):
 
 class MouseDrawRenderPass(OutputRenderPass):
     def __init__(self):
-        self.window_name = "pooce-mouse"
         self.is_mouse_down = False
         self.drawer = SimpleDotDrawer(COLOR_LAGUNA_BLUE)
         self.last_pos = (0, 0)
 
+    def render(self, img, events):
+        for event in events:
+            if event.mouse_click == EVENT_MOUSE_LEFT_DOWN:
+                self.is_mouse_down = True
+            elif event.mouse_click == EVENT_MOUSE_LEFT_UP:
+                self.is_mouse_down = False
+            elif event.mouse_click == EVENT_MOUSE_MIDDLE_DOWN:
+                self.drawer.reset()
+            elif event.mouse_pos is not None:
+                if self.is_mouse_down:
+                    self.drawer.record(
+                        OUT_WIDTH - event.mouse_pos[0], event.mouse_pos[1]
+                    )
+
+                self.last_pos = (OUT_WIDTH - event.mouse_pos[0], event.mouse_pos[1])
+
+        self.drawer.draw(img)
+        cv2.circle(img, self.last_pos, 8, COLOR_WHITE, 4)
+
+        return img
+
+
+class ControlWindow:
+    def __init__(self, event_queue: queue.Queue):
+        self.window_name = "pooce-mouse"
+        self.event_queue = event_queue
         threading.Thread(target=self.window_thread).start()
 
     def window_thread(self):
@@ -328,33 +382,31 @@ class MouseDrawRenderPass(OutputRenderPass):
 
         while 1:
             cv2.imshow(self.window_name, background)
-            if cv2.waitKey(20) & 0xFF == 27:
+            key_code = cv2.waitKey(20) & 0xFF
+
+            if key_code == 27:
                 break
+
+            if key_code > 0:
+                self.event_queue.put(Event(key_code=key_code))
 
         cv2.destroyAllWindows()
 
     def on_mouse_event(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
-            self.is_mouse_down = True
+            self.event_queue.put(Event(mouse_click=EVENT_MOUSE_LEFT_DOWN))
         elif event == cv2.EVENT_LBUTTONUP:
-            self.is_mouse_down = False
+            self.event_queue.put(Event(mouse_click=EVENT_MOUSE_LEFT_UP))
         elif event == cv2.EVENT_MBUTTONDOWN:
-            self.drawer.reset()
+            self.event_queue.put(Event(mouse_click=EVENT_MOUSE_MIDDLE_DOWN))
 
-        if self.is_mouse_down:
-            self.drawer.record(OUT_WIDTH - x, y)
-
-        self.last_pos = (OUT_WIDTH - x, y)
-
-    def render(self, img):
-        self.drawer.draw(img)
-        cv2.circle(img, self.last_pos, 8, COLOR_WHITE, 4)
-
-        return img
+        self.event_queue.put(Event(mouse_pos=(x, y)))
 
 
 class VideoProxy(virtualvideo.VideoSource):
     def __init__(self):
+        self.event_queue = queue.Queue()
+
         self.output_rect = (OUT_WIDTH, OUT_HEIGHT)
 
         self.videoInputOriginal = cv2.VideoCapture(IN_VIDEO_DEVICE_ID)
@@ -370,6 +422,8 @@ class VideoProxy(virtualvideo.VideoSource):
             MouseDrawRenderPass(),
         ]
 
+        self.__control_window = ControlWindow(self.event_queue)
+
     def img_size(self):
         return self.output_rect
 
@@ -381,8 +435,12 @@ class VideoProxy(virtualvideo.VideoSource):
             _rval, frame = self.videoInputOriginal.read()
             frame_resized = cv2.resize(frame, self.output_rect)
 
+            events = []
+            while self.event_queue.qsize() > 0:
+                events.append(self.event_queue.get())
+
             for output_render_pass in self.output_render_passes:
-                frame_resized = output_render_pass.render(frame_resized)
+                frame_resized = output_render_pass.render(frame_resized, events)
 
             yield frame_resized
 
