@@ -10,8 +10,20 @@ Video proxy learning project.
 - `python -m venv ./.venv`
 - `. .venv/bin/activate`
 - `pip install -r requirements.txt`
+- `python pooce.py`
 
-Current plugins:
+## Controls
+
+- 0-9: output render pass toggle
+- `: turn off all render pass
+- -: turn on all render pass
+- p: toggle PIP mode
+- ESC: kill UI event listener
+- CTRL-C: exit
+- a/d: pong left/right
+
+## Current plugins
+
 - static text
 - real time typed text
 - animation (rain)
@@ -21,7 +33,8 @@ Current plugins:
 - shell command watchdog
 - mouse drawing
 
-Wishlist:
+## Wishlist
+
 - faster image recognition
 - static text pass:
   - position / color
