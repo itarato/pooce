@@ -1,3 +1,15 @@
+"""
+Pooce - A Python video proxy
+
+Pooce is an artificial video output stream that allows interaction (plugins).
+It works in a very simple way: it opens a video device and puts a renderable frame onto the output. This frame
+is a copy of the default available video device (existing webcam).
+The output is handed over to a list of programmable passes (output render passes) before the
+final return.
+
+Currently only supported on Linux.
+"""
+
 import virtualvideo
 import cv2
 import random
@@ -12,8 +24,11 @@ import signal
 
 OUT_WIDTH = 1280
 OUT_HEIGHT = 720
+
+# Target frame per seconds (not guaranteed).
 OUT_FPS = 60
 
+# Linux device numbers (/dev/video?).
 IN_VIDEO_DEVICE_ID = 0
 OUT_VIDEO_DEVICE_ID = 2
 
@@ -25,12 +40,15 @@ COLOR_PURPLE = (255, 0, 255)
 COLOR_RED = (0, 0, 255)
 COLOR_LAGUNA_BLUE = (255, 255, 0)
 
+# For main event handling.
 EVENT_MOUSE_LEFT_DOWN = 1
 EVENT_MOUSE_LEFT_UP = 2
 EVENT_MOUSE_MIDDLE_DOWN = 3
 
+# Mask to control which output renderer is enabled.
 OUTPUT_RENDER_PASS_MASK_ALL = -1
 
+# For SIGINT to signal everyone.
 global_exit_flag = False
 
 
@@ -44,6 +62,9 @@ def sig_interrupt_handler(sig, frame):
     sys.exit(0)
 
 
+#
+# Event record for app level UI events.
+#
 class Event:
     def __init__(self, mouse_pos=None, mouse_click=None, key_code=None):
         self.mouse_pos = mouse_pos
@@ -51,6 +72,9 @@ class Event:
         self.key_code = key_code
 
 
+#
+# Drawing interface for dot level painting (each input is a single coordinate).
+#
 class DotDrawer:
     def record(self, x, y):
         NotImplementedError("Must be implemented")
@@ -302,6 +326,9 @@ class TypingTextRenderPass(OutputRenderPass):
         return cv2.flip(img, 1)
 
 
+#
+# @link https://medium.com/featurepreneur/object-detection-using-single-shot-multibox-detection-ssd-and-opencvs-deep-neural-network-dnn-d983e9d52652
+#
 class CarDrawRenderPass(OutputRenderPass):
     def __init__(self):
         self.net = cv2.dnn.readNetFromCaffe(
@@ -345,7 +372,9 @@ class CarDrawRenderPass(OutputRenderPass):
         return img
 
 
-# https://github.com/ChristophRahn/red-circle-detection/blob/master/red-circle-detection.py
+#
+# @link https://github.com/ChristophRahn/red-circle-detection/blob/master/red-circle-detection.py
+#
 class RedDotDrawRenderPass(OutputRenderPass):
     def __init__(self, drawer: DotDrawer):
         self.drawer = drawer
