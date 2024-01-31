@@ -26,6 +26,8 @@ EVENT_MOUSE_LEFT_DOWN = 1
 EVENT_MOUSE_LEFT_UP = 2
 EVENT_MOUSE_MIDDLE_DOWN = 3
 
+OUTPUT_RENDER_PASS_MASK_ALL = -1
+
 
 class Event:
     def __init__(self, mouse_pos=None, mouse_click=None, key_code=None):
@@ -434,14 +436,14 @@ class VideoProxy(virtualvideo.VideoSource):
         self.videoInputOriginal = cv2.VideoCapture(IN_VIDEO_DEVICE_ID)
 
         self.output_render_passes = [
-            # RedDotDrawRenderPass(LineDrawer()),
-            # CarDrawRenderPass(),
-            RandomFlashRenderPass(),
-            StaticTextRenderPass("Pooce Demo v0"),
-            TypingTextRenderPass(),
-            PongRenderPass(),
-            # ShellWatcherRenderPass(["vmstat"], 10, 8),
-            MouseDrawRenderPass(),
+            StaticTextRenderPass("Pooce Demo v0"),  # 0
+            RedDotDrawRenderPass(LineDrawer()),  # 1
+            CarDrawRenderPass(),  # 2
+            RandomFlashRenderPass(),  # 3
+            TypingTextRenderPass(),  # 4
+            PongRenderPass(),  # 5
+            ShellWatcherRenderPass(["vmstat"], 10, 8),  # 6
+            MouseDrawRenderPass(),  # 7
         ]
 
         self.__control_window = ControlWindow(self.event_queue)
@@ -453,16 +455,30 @@ class VideoProxy(virtualvideo.VideoSource):
         return 10
 
     def generator(self):
+        output_render_pass_mask = 0  # First pass visible by default.
+
         while True:
             _rval, frame = self.videoInputOriginal.read()
             frame_resized = cv2.resize(frame, self.output_rect)
 
             events = []
             while self.event_queue.qsize() > 0:
-                events.append(self.event_queue.get())
+                event = self.event_queue.get()
+                events.append(event)
 
-            for output_render_pass in self.output_render_passes:
-                frame_resized = output_render_pass.render(frame_resized, events)
+                key_code = event.key_code
+                if key_code is not None and key_code > 0:
+                    if key_code == 45:  # Key: -
+                        output_render_pass_mask = OUTPUT_RENDER_PASS_MASK_ALL
+                    elif key_code >= 48 and key_code <= 57:  # Key: 0..9
+                        output_render_pass_mask = key_code - 48
+
+            for i, output_render_pass in enumerate(self.output_render_passes):
+                if (
+                    output_render_pass_mask == OUTPUT_RENDER_PASS_MASK_ALL
+                    or i == output_render_pass_mask % len(self.output_render_passes)
+                ):
+                    frame_resized = output_render_pass.render(frame_resized, events)
 
             yield frame_resized
 
