@@ -10,3 +10,11 @@ Video proxy learning project.
 - `python -m venv ./.venv`
 - `. .venv/bin/activate`
 - `pip install -r requirements.txt`
+
+Wishlist:
+- faster image recognition
+- static text pass:
+  - position / color
+- configurable size + frame rate
+- typing pass to be keypress granular (no enter)
+- mouse drawing
