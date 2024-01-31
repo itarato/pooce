@@ -17,6 +17,44 @@ COLOR_GREEN = (0, 255, 0)
 COLOR_BLUE = (255, 0, 0)
 COLOR_WHITE = (255, 255, 255)
 COLOR_PURPLE = (255, 0, 255)
+COLOR_RED = (0, 0, 255)
+
+
+class DotDrawer:
+    def record(self, x, y):
+        NotImplementedError("Must be implemented")
+
+    def draw(self, img):
+        NotImplementedError("Must be implemented")
+
+
+class SimpleDotDrawer(DotDrawer):
+    def __init__(self):
+        self.map = [0] * (OUT_HEIGHT * OUT_WIDTH)
+
+    def record(self, x, y):
+        self.map[(OUT_WIDTH * y) + x] = 1
+
+    def draw(self, img):
+        for y in range(OUT_HEIGHT):
+            for x in range(OUT_WIDTH):
+                if self.map[(y * OUT_WIDTH) + x] > 0:
+                    cv2.circle(img, (x, y), 4, COLOR_RED, -1, cv2.LINE_AA)
+
+
+class LineDrawer(DotDrawer):
+    def __init__(self):
+        self.sequence = []
+
+    def record(self, x, y):
+        self.sequence.append((x, y))
+
+    def draw(self, img):
+        if len(self.sequence) == 0:
+            return
+
+        for i in range(len(self.sequence) - 1):
+            cv2.line(img, self.sequence[i], self.sequence[i + 1], COLOR_RED)
 
 
 class OutputRenderPass:
@@ -219,8 +257,8 @@ class CarDrawRenderPass(OutputRenderPass):
 
 # https://github.com/ChristophRahn/red-circle-detection/blob/master/red-circle-detection.py
 class RedDotDrawRenderPass(OutputRenderPass):
-    def __init__(self):
-        self.map = [0] * (OUT_HEIGHT * OUT_WIDTH)
+    def __init__(self, drawer: DotDrawer):
+        self.drawer = drawer
 
     def render(self, img):
         captured_frame = img
@@ -255,13 +293,9 @@ class RedDotDrawRenderPass(OutputRenderPass):
 
         if circles is not None:
             circles = numpy.round(circles[0, :]).astype("int")
-            self.map[(OUT_WIDTH * circles[0, 1]) + circles[0, 0]] = 1
+            self.drawer.record(circles[0, 0], circles[0, 1])
 
-        for y in range(OUT_HEIGHT):
-            for x in range(OUT_WIDTH):
-                if self.map[(y * OUT_WIDTH) + x] == 0:
-                    continue
-                cv2.circle(img, (x, y), 4, COLOR_PURPLE, -1, cv2.LINE_AA)
+        self.drawer.draw(img)
 
         return img
 
@@ -273,7 +307,7 @@ class VideoProxy(virtualvideo.VideoSource):
         self.videoInputOriginal = cv2.VideoCapture(IN_VIDEO_DEVICE_ID)
 
         self.output_render_passes = [
-            RedDotDrawRenderPass(),
+            RedDotDrawRenderPass(LineDrawer()),
             RandomFlashRenderPass(),
             StaticTextRenderPass("Pooce Demo v0"),
             TypingTextRenderPass(),
