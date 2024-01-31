@@ -89,6 +89,9 @@ class DotDrawer:
         NotImplementedError("Must be implemented")
 
 
+#
+# Dot drawer that only draws dots as they were registered.
+#
 class SimpleDotDrawer(DotDrawer):
     def __init__(self, color=COLOR_RED):
         self.reset()
@@ -107,6 +110,9 @@ class SimpleDotDrawer(DotDrawer):
         self.map = [0] * (OUT_HEIGHT * OUT_WIDTH)
 
 
+#
+# Dot drawer that draws lines using the received sequence of dots.
+#
 class LineDrawer(DotDrawer):
     def __init__(self):
         self.sequence = []
@@ -125,11 +131,19 @@ class LineDrawer(DotDrawer):
         self.sequence.clear()
 
 
+#
+# A render pass is a unit of code that can interact with the output frame. The returned image will be drawn
+# (eventually) to the output video stream. Events are coming from the apps main event collector window
+# (mouse and key).
+#
 class OutputRenderPass:
     def render(self, img, events):
         NotImplementedError("Must be implemented")
 
 
+#
+# Render pass that plays pong. Keys `a` and `d` are left/right.
+#
 class PongRenderPass(OutputRenderPass):
     def __init__(self):
         self.x = 10
@@ -193,6 +207,9 @@ class PongRenderPass(OutputRenderPass):
         return cv2.circle(img, (self.x, self.y), self.size, COLOR_GREEN, -1)
 
 
+#
+# This render pass demonstrates 2D graphics animation (rain).
+#
 class RandomFlashRenderPass(OutputRenderPass):
     def __init__(self):
         self.drops = [OUT_HEIGHT] * OUT_WIDTH
@@ -203,14 +220,16 @@ class RandomFlashRenderPass(OutputRenderPass):
             self.drops[random.randrange(0, OUT_WIDTH)] = 0
 
         for x, y in enumerate(self.drops):
-            if y >= OUT_HEIGHT:
-                continue
-            self.drops[x] += self.speed
-            img[y : (y + 20), x : (x + 10)] = COLOR_BLUE
+            if y < OUT_HEIGHT:
+                self.drops[x] += self.speed
+                img[y : (y + 20), x : (x + 10)] = COLOR_BLUE
 
         return img
 
 
+#
+# Render pass that paints a fixed text.
+#
 class StaticTextRenderPass(OutputRenderPass):
     def __init__(self, text):
         self.text = text
@@ -232,10 +251,14 @@ class StaticTextRenderPass(OutputRenderPass):
         return cv2.flip(img, 1)
 
 
+#
+# Render pass that can execute a shell command and paint STDOUT to the frame.
+#
 class ShellWatcherRenderPass(OutputRenderPass):
     def __init__(self, cmd_parts, frequency=10, x=OUT_WIDTH >> 1, y=OUT_HEIGHT >> 1):
         self.cmd_parts = cmd_parts
 
+        # To limit drawing to every frequency-th frame.
         self.frequency = frequency
         self.counter = frequency
         self.output = []
@@ -282,6 +305,10 @@ class ShellWatcherRenderPass(OutputRenderPass):
         return img
 
 
+#
+# Render pass that receives real time text input from STDIN.
+# Use `/clear` to reset.
+#
 class TypingTextRenderPass(OutputRenderPass):
     def __init__(self):
         self.texts = []
@@ -330,6 +357,9 @@ class TypingTextRenderPass(OutputRenderPass):
 
 
 #
+# Render pass that draws by tracking shapes. Currently it's looking for planes and cars, though
+# it's crazy bad and inefficient. It has troubles with moving and lights.
+#
 # @link https://medium.com/featurepreneur/object-detection-using-single-shot-multibox-detection-ssd-and-opencvs-deep-neural-network-dnn-d983e9d52652
 #
 class CarDrawRenderPass(OutputRenderPass):
@@ -352,6 +382,30 @@ class CarDrawRenderPass(OutputRenderPass):
                 continue
 
             idx = int(detections[0, 0, i, 1])
+            # For reference.
+            # CLASSES = [
+            #     "background",
+            #     "aeroplane",
+            #     "bicycle",
+            #     "bird",
+            #     "boat",
+            #     "bottle",
+            #     "bus",
+            #     "car",
+            #     "cat",
+            #     "chair",
+            #     "cow",
+            #     "diningtable",
+            #     "dog",
+            #     "horse",
+            #     "motorbike",
+            #     "person",
+            #     "pottedplant",
+            #     "sheep",
+            #     "sofa",
+            #     "train",
+            #     "tvmonitor",
+            # ]
             if idx != 7:
                 continue
 
