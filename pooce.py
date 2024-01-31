@@ -18,9 +18,9 @@ class PongRenderPass(OutputRenderPass):
     def __init__(self):
         self.x = 10
         self.y = 10
-        self.size = 8
-        self.vx = 15
-        self.vy = 15
+        self.size = 16
+        self.vx = 20
+        self.vy = 20
 
     def render(self, img):
         x_candidate = self.x + self.vx
@@ -35,7 +35,7 @@ class PongRenderPass(OutputRenderPass):
         self.x += self.vx
         self.y += self.vy
 
-        return cv2.circle(img, (self.x, self.y), self.size, (100, 255, 100), 8)
+        return cv2.circle(img, (self.x, self.y), self.size, (100, 255, 100), -1)
 
 
 class RandomFlashRenderPass(OutputRenderPass):
@@ -132,9 +132,6 @@ class CarDrawRenderPass(OutputRenderPass):
             box = detections[0, 0, i, 3:7] * numpy.array([w, h, w, h])
             (startX, startY, endX, endY) = box.astype("int")
 
-            # cv2.rectangle(
-            #     img, (startX, startY), (endX, endY), (0, 0, 255), -1, cv2.LINE_AA
-            # )
             if (
                 startX >= 0
                 and startX < OUT_WIDTH
@@ -154,7 +151,7 @@ class CarDrawRenderPass(OutputRenderPass):
 
 class VideoProxy(virtualvideo.VideoSource):
     def __init__(self):
-        self.output_rect = (OUT_HEIGHT, OUT_WIDTH)
+        self.output_rect = (OUT_WIDTH, OUT_HEIGHT)
 
         self.videoInputOriginal = cv2.VideoCapture(0)
 
