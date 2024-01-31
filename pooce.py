@@ -47,7 +47,8 @@ EVENT_MOUSE_LEFT_UP = 2
 EVENT_MOUSE_MIDDLE_DOWN = 3
 
 # Mask to control which output renderer is enabled.
-OUTPUT_RENDER_PASS_MASK_ALL = -1
+OUTPUT_RENDER_PASS_MASK_ALL = ~0
+OUTPUT_RENDER_PASS_MASK_NONE = 0
 
 # For SIGINT to signal everyone.
 global_exit_flag = False
@@ -649,17 +650,17 @@ class VideoProxy(virtualvideo.VideoSource):
                 if key_code is not None and key_code > 0:
                     if key_code == 45:  # Key: -
                         output_render_pass_mask = OUTPUT_RENDER_PASS_MASK_ALL
+                    elif key_code == 96:  # Key: `
+                        output_render_pass_mask = OUTPUT_RENDER_PASS_MASK_NONE
                     elif key_code >= 48 and key_code <= 57:  # Key: 0..9
-                        output_render_pass_mask = key_code - 48
+                        output_render_pass_mask ^= 1 << (key_code - 48)
                     elif key_code == 112:  # Key: p
                         is_pip_mode = not is_pip_mode
 
             used_passes = []
             for i, output_render_pass in enumerate(self.output_render_passes):
-                if (
-                    output_render_pass_mask == OUTPUT_RENDER_PASS_MASK_ALL
-                    or i == output_render_pass_mask % len(self.output_render_passes)
-                ):
+                pass_mask = 1 << i
+                if output_render_pass_mask & pass_mask > 0:
                     img = output_render_pass.render(img, events)
                     used_passes.append(output_render_pass.name())
 
