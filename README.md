@@ -30,4 +30,3 @@ Wishlist:
 - (!) how to fix broken video device
 - (!) apple system compatibility
 - (!) horizontal flip fix
-- default stream PIP
