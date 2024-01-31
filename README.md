@@ -27,4 +27,7 @@ Wishlist:
   - position / color
 - configurable size + frame rate
 - typing pass to be keypress granular (no enter)
-- mouse drawing
+- (!) how to fix broken video device
+- (!!!) apple system compatibility
+- (!!) horizontal flip fix
+- graceful exit
