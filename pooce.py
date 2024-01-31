@@ -600,7 +600,7 @@ class VideoProxy(virtualvideo.VideoSource):
         self.videoInputOriginal = cv2.VideoCapture(IN_VIDEO_DEVICE_ID)
 
         self.output_render_passes = [
-            StaticTextRenderPass("Pooce Demo v0"),  # 0
+            StaticTextRenderPass("Pooce (Video Proxy) Demo v0.1"),  # 0
             RedDotDrawRenderPass(LineDrawer()),  # 1
             CarDrawRenderPass(),  # 2
             RandomFlashRenderPass(),  # 3
@@ -626,12 +626,18 @@ class VideoProxy(virtualvideo.VideoSource):
         global global_exit_flag
         global background
 
-        output_render_pass_mask = 0  # First pass visible by default.
+        output_render_pass_mask = 0b1
         is_pip_mode = False
 
         while not global_exit_flag:
-            _rval, default_video = self.videoInputOriginal.read()
+            # Read the system default (0) video stream frame.
+            rval, default_video = self.videoInputOriginal.read()
+            if not rval:
+                logging.error("Failed retrieving default video stream frame")
+                global_exit_flag = True
+                break
 
+            # In PIP mode the default video is presented small in the top right corner.
             if is_pip_mode:
                 default_video_resized = cv2.resize(
                     default_video, (OUT_WIDTH >> 2, OUT_HEIGHT >> 2)
@@ -641,11 +647,13 @@ class VideoProxy(virtualvideo.VideoSource):
             else:
                 img = cv2.resize(default_video, (OUT_WIDTH, OUT_HEIGHT))
 
+            # Move out accumulated UI events from the thread safe queue.
             events = []
             while self.event_queue.qsize() > 0:
                 event = self.event_queue.get()
                 events.append(event)
 
+                # React on main app events (if there is any).
                 key_code = event.key_code
                 if key_code is not None and key_code > 0:
                     if key_code == 45:  # Key: -
@@ -657,6 +665,7 @@ class VideoProxy(virtualvideo.VideoSource):
                     elif key_code == 112:  # Key: p
                         is_pip_mode = not is_pip_mode
 
+            # Execute render passes.
             used_passes = []
             for i, output_render_pass in enumerate(self.output_render_passes):
                 pass_mask = 1 << i
@@ -664,6 +673,7 @@ class VideoProxy(virtualvideo.VideoSource):
                     img = output_render_pass.render(img, events)
                     used_passes.append(output_render_pass.name())
 
+            # Printing active passes on the screen.
             img = cv2.flip(img, 1)
             for i, pass_name in enumerate(used_passes):
                 cv2.putText(
@@ -677,11 +687,14 @@ class VideoProxy(virtualvideo.VideoSource):
                 )
             img = cv2.flip(img, 1)
 
+            # Present frame to the fake device.
             yield img
 
 
+# CTRL-C handler.
 signal.signal(signal.SIGINT, sig_interrupt_handler)
 
+# Setup app.
 video_device = virtualvideo.FakeVideoDevice()
 video_device.init_input(VideoProxy())
 video_device.init_output(OUT_VIDEO_DEVICE_ID, OUT_WIDTH, OUT_HEIGHT, fps=OUT_FPS)
