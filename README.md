@@ -15,7 +15,7 @@ Current plugins:
 - static text
 - real time typed text
 - animation (rain)
-- animation (pong)
+- game (pong)
 - car recognition drawing
 - red dot recognition drawing
 - shell command watchdog
