@@ -7,9 +7,12 @@ import numpy
 import subprocess
 import threading
 import queue
+import time
+import signal
 
 OUT_WIDTH = 1280
 OUT_HEIGHT = 720
+OUT_FPS = 60
 
 IN_VIDEO_DEVICE_ID = 0
 OUT_VIDEO_DEVICE_ID = 2
@@ -27,6 +30,18 @@ EVENT_MOUSE_LEFT_UP = 2
 EVENT_MOUSE_MIDDLE_DOWN = 3
 
 OUTPUT_RENDER_PASS_MASK_ALL = -1
+
+global_exit_flag = False
+
+
+def sig_interrupt_handler(sig, frame):
+    global global_exit_flag
+    global_exit_flag = True
+
+    time.sleep(1)
+    print("\nExiting Pooce\n")
+
+    sys.exit(0)
 
 
 class Event:
@@ -326,6 +341,10 @@ class RedDotDrawRenderPass(OutputRenderPass):
         self.drawer = drawer
 
     def render(self, img, events):
+        for event in events:
+            if event.mouse_click == EVENT_MOUSE_MIDDLE_DOWN:
+                self.drawer.reset()
+
         captured_frame = img
 
         # Convert original image to BGR, since Lab is only available from BGR
@@ -400,11 +419,13 @@ class ControlWindow:
         threading.Thread(target=self.window_thread).start()
 
     def window_thread(self):
+        global global_exit_flag
+
         cv2.namedWindow(self.window_name)
         background = numpy.zeros((OUT_HEIGHT, OUT_WIDTH, 3), numpy.uint8)
         cv2.setMouseCallback(self.window_name, self.on_mouse_event)
 
-        while 1:
+        while not global_exit_flag:
             cv2.imshow(self.window_name, background)
             key_code = cv2.waitKey(20) & 0xFF
 
@@ -452,12 +473,13 @@ class VideoProxy(virtualvideo.VideoSource):
         return self.output_rect
 
     def fps(self):
-        return 10
+        return OUT_FPS
 
     def generator(self):
+        global global_exit_flag
         output_render_pass_mask = 0  # First pass visible by default.
 
-        while True:
+        while not global_exit_flag:
             _rval, frame = self.videoInputOriginal.read()
             frame_resized = cv2.resize(frame, self.output_rect)
 
@@ -483,7 +505,9 @@ class VideoProxy(virtualvideo.VideoSource):
             yield frame_resized
 
 
+signal.signal(signal.SIGINT, sig_interrupt_handler)
+
 video_device = virtualvideo.FakeVideoDevice()
 video_device.init_input(VideoProxy())
-video_device.init_output(OUT_VIDEO_DEVICE_ID, OUT_WIDTH, OUT_HEIGHT, fps=30)
+video_device.init_output(OUT_VIDEO_DEVICE_ID, OUT_WIDTH, OUT_HEIGHT, fps=OUT_FPS)
 video_device.run()
