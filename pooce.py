@@ -5,6 +5,7 @@ import select
 import sys
 import numpy
 import subprocess
+import threading
 
 OUT_WIDTH = 1280
 OUT_HEIGHT = 720
@@ -18,6 +19,7 @@ COLOR_BLUE = (255, 0, 0)
 COLOR_WHITE = (255, 255, 255)
 COLOR_PURPLE = (255, 0, 255)
 COLOR_RED = (0, 0, 255)
+COLOR_LAGUNA_BLUE = (255, 255, 0)
 
 
 class DotDrawer:
@@ -27,10 +29,14 @@ class DotDrawer:
     def draw(self, img):
         NotImplementedError("Must be implemented")
 
+    def reset(self):
+        NotImplementedError("Must be implemented")
+
 
 class SimpleDotDrawer(DotDrawer):
-    def __init__(self):
-        self.map = [0] * (OUT_HEIGHT * OUT_WIDTH)
+    def __init__(self, color=COLOR_RED):
+        self.reset()
+        self.color = color
 
     def record(self, x, y):
         self.map[(OUT_WIDTH * y) + x] = 1
@@ -39,7 +45,10 @@ class SimpleDotDrawer(DotDrawer):
         for y in range(OUT_HEIGHT):
             for x in range(OUT_WIDTH):
                 if self.map[(y * OUT_WIDTH) + x] > 0:
-                    cv2.circle(img, (x, y), 4, COLOR_RED, -1)
+                    cv2.circle(img, (x, y), 4, self.color, -1)
+
+    def reset(self):
+        self.map = [0] * (OUT_HEIGHT * OUT_WIDTH)
 
 
 class LineDrawer(DotDrawer):
@@ -55,6 +64,9 @@ class LineDrawer(DotDrawer):
 
         for i in range(len(self.sequence) - 1):
             cv2.line(img, self.sequence[i], self.sequence[i + 1], COLOR_RED, 4)
+
+    def reset(self):
+        self.sequence.clear()
 
 
 class OutputRenderPass:
@@ -300,6 +312,47 @@ class RedDotDrawRenderPass(OutputRenderPass):
         return img
 
 
+class MouseDrawRenderPass(OutputRenderPass):
+    def __init__(self):
+        self.window_name = "pooce-mouse"
+        self.is_mouse_down = False
+        self.drawer = SimpleDotDrawer(COLOR_LAGUNA_BLUE)
+        self.last_pos = (0, 0)
+
+        threading.Thread(target=self.window_thread).start()
+
+    def window_thread(self):
+        cv2.namedWindow(self.window_name)
+        background = numpy.zeros((OUT_HEIGHT, OUT_WIDTH, 3), numpy.uint8)
+        cv2.setMouseCallback(self.window_name, self.on_mouse_event)
+
+        while 1:
+            cv2.imshow(self.window_name, background)
+            if cv2.waitKey(20) & 0xFF == 27:
+                break
+
+        cv2.destroyAllWindows()
+
+    def on_mouse_event(self, event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            self.is_mouse_down = True
+        elif event == cv2.EVENT_LBUTTONUP:
+            self.is_mouse_down = False
+        elif event == cv2.EVENT_MBUTTONDOWN:
+            self.drawer.reset()
+
+        if self.is_mouse_down:
+            self.drawer.record(OUT_WIDTH - x, y)
+
+        self.last_pos = (OUT_WIDTH - x, y)
+
+    def render(self, img):
+        self.drawer.draw(img)
+        cv2.circle(img, self.last_pos, 8, COLOR_WHITE, 4)
+
+        return img
+
+
 class VideoProxy(virtualvideo.VideoSource):
     def __init__(self):
         self.output_rect = (OUT_WIDTH, OUT_HEIGHT)
@@ -307,13 +360,14 @@ class VideoProxy(virtualvideo.VideoSource):
         self.videoInputOriginal = cv2.VideoCapture(IN_VIDEO_DEVICE_ID)
 
         self.output_render_passes = [
-            RedDotDrawRenderPass(LineDrawer()),
+            # RedDotDrawRenderPass(LineDrawer()),
+            # CarDrawRenderPass(),
             RandomFlashRenderPass(),
             StaticTextRenderPass("Pooce Demo v0"),
             TypingTextRenderPass(),
             PongRenderPass(),
-            ShellWatcherRenderPass(["vmstat"], 10, 8),
-            # CarDrawRenderPass(),
+            # ShellWatcherRenderPass(["vmstat"], 10, 8),
+            MouseDrawRenderPass(),
         ]
 
     def img_size(self):

@@ -11,6 +11,16 @@ Video proxy learning project.
 - `. .venv/bin/activate`
 - `pip install -r requirements.txt`
 
+Current plugins:
+- static text
+- real time typed text
+- animation (rain)
+- animation (pong)
+- car recognition drawing
+- red dot recognition drawing
+- shell command watchdog
+- mouse drawing
+
 Wishlist:
 - faster image recognition
 - static text pass:
