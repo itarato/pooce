@@ -21,6 +21,7 @@ import threading
 import queue
 import time
 import signal
+import logging
 
 OUT_WIDTH = 1280
 OUT_HEIGHT = 720
@@ -54,13 +55,17 @@ global_exit_flag = False
 # Default background.
 background = numpy.zeros((OUT_HEIGHT, OUT_WIDTH, 3), numpy.uint8)
 
+logging.basicConfig()
+logging.root.setLevel(logging.NOTSET)
+logging.basicConfig(level=logging.NOTSET)
+
 
 def sig_interrupt_handler(sig, frame):
     global global_exit_flag
     global_exit_flag = True
 
     time.sleep(1)
-    print("\nExiting Pooce\n")
+    logging.info("Exiting Pooce")
 
     sys.exit(0)
 
@@ -137,6 +142,9 @@ class LineDrawer(DotDrawer):
 # (mouse and key).
 #
 class OutputRenderPass:
+    def name(self):
+        NotImplementedError("Must be implemented")
+
     def render(self, img, events):
         NotImplementedError("Must be implemented")
 
@@ -156,6 +164,9 @@ class PongRenderPass(OutputRenderPass):
         self.bat_x = OUT_WIDTH >> 1
         self.bat_size = 160
         self.score = 0
+
+    def name(self):
+        return "Pong (game)"
 
     def render(self, img, events):
         x_candidate = self.x + self.vx
@@ -215,6 +226,9 @@ class RandomFlashRenderPass(OutputRenderPass):
         self.drops = [OUT_HEIGHT] * OUT_WIDTH
         self.speed = 50
 
+    def name(self):
+        return "Rain (animation)"
+
     def render(self, img, events):
         if random.random() < 0.4:
             self.drops[random.randrange(0, OUT_WIDTH)] = 0
@@ -233,6 +247,9 @@ class RandomFlashRenderPass(OutputRenderPass):
 class StaticTextRenderPass(OutputRenderPass):
     def __init__(self, text):
         self.text = text
+
+    def name(self):
+        return "Static text"
 
     def render(self, img, events):
         img = cv2.flip(img, 1)
@@ -265,6 +282,9 @@ class ShellWatcherRenderPass(OutputRenderPass):
 
         self.x = x
         self.y = y
+
+    def name(self):
+        return "Shell command (" + " ".join(self.cmd_parts) + ")"
 
     def render(self, img, events):
         if self.counter >= self.frequency:
@@ -313,6 +333,9 @@ class TypingTextRenderPass(OutputRenderPass):
     def __init__(self):
         self.texts = []
 
+    def name(self):
+        return "STDIN typing"
+
     def render(self, img, events):
         if select.select(
             [
@@ -357,7 +380,7 @@ class TypingTextRenderPass(OutputRenderPass):
 
 
 #
-# Render pass that draws by tracking shapes. Currently it's looking for planes and cars, though
+# Render pass that draws by tracking shapes. Currently it's looking for cars, though
 # it's crazy bad and inefficient. It has troubles with moving and lights.
 #
 # @link https://medium.com/featurepreneur/object-detection-using-single-shot-multibox-detection-ssd-and-opencvs-deep-neural-network-dnn-d983e9d52652
@@ -369,6 +392,9 @@ class CarDrawRenderPass(OutputRenderPass):
             "model/MobileNetSSD_deploy.caffemodel",
         )
         self.map = [0] * (OUT_HEIGHT * OUT_WIDTH)
+
+    def name(self):
+        return "Car recognition (drawing)"
 
     def render(self, img, events):
         blob = cv2.dnn.blobFromImage(img, 0.007843, (300, 300), 127.5)
@@ -430,11 +456,17 @@ class CarDrawRenderPass(OutputRenderPass):
 
 
 #
+# Render pass that draws at locations where a red dot is presented.
+# Mouse middle click is reset.
+#
 # @link https://github.com/ChristophRahn/red-circle-detection/blob/master/red-circle-detection.py
 #
 class RedDotDrawRenderPass(OutputRenderPass):
     def __init__(self, drawer: DotDrawer):
         self.drawer = drawer
+
+    def name(self):
+        return "Red dot recognition (drawing)"
 
     def render(self, img, events):
         for event in events:
@@ -480,11 +512,17 @@ class RedDotDrawRenderPass(OutputRenderPass):
         return img
 
 
+#
+# Output pass that draws with the mouse. Middle button click is reset.
+#
 class MouseDrawRenderPass(OutputRenderPass):
     def __init__(self):
         self.is_mouse_down = False
         self.drawer = SimpleDotDrawer(COLOR_LAGUNA_BLUE)
         self.last_pos = (0, 0)
+
+    def name(self):
+        return "Mouse drawing"
 
     def render(self, img, events):
         for event in events:
@@ -508,6 +546,9 @@ class MouseDrawRenderPass(OutputRenderPass):
         return img
 
 
+#
+# App level control window for event collection (mouse and keyboard).
+#
 class ControlWindow:
     def __init__(self, event_queue: queue.Queue):
         self.window_name = "pooce-mouse"
@@ -544,8 +585,13 @@ class ControlWindow:
         self.event_queue.put(Event(mouse_pos=(x, y)))
 
 
+#
+# Video proxy that sets up an artificial video device and executes a list of render passes to augment it.
+#
 class VideoProxy(virtualvideo.VideoSource):
     def __init__(self):
+        logging.info("Pooce Video Proxy start")
+
         self.event_queue = queue.Queue()
 
         self.output_rect = (OUT_WIDTH, OUT_HEIGHT)
@@ -563,7 +609,10 @@ class VideoProxy(virtualvideo.VideoSource):
             MouseDrawRenderPass(),  # 7
             ShellWatcherRenderPass(["cat", "experiment/notepad.txt"], 10, 300, 30),  # 8
         ]
+        for i, render_pass in enumerate(self.output_render_passes):
+            logging.info("Pass #" + str(i) + ": " + render_pass.name())
 
+        # To keep window thread alive.
         self.__control_window = ControlWindow(self.event_queue)
 
     def img_size(self):
@@ -605,12 +654,27 @@ class VideoProxy(virtualvideo.VideoSource):
                     elif key_code == 112:  # Key: p
                         is_pip_mode = not is_pip_mode
 
+            used_passes = []
             for i, output_render_pass in enumerate(self.output_render_passes):
                 if (
                     output_render_pass_mask == OUTPUT_RENDER_PASS_MASK_ALL
                     or i == output_render_pass_mask % len(self.output_render_passes)
                 ):
                     img = output_render_pass.render(img, events)
+                    used_passes.append(output_render_pass.name())
+
+            img = cv2.flip(img, 1)
+            for i, pass_name in enumerate(used_passes):
+                cv2.putText(
+                    img,
+                    pass_name,
+                    (OUT_WIDTH - 250, OUT_HEIGHT - 20 - (i * 20)),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    COLOR_WHITE,
+                    2,
+                )
+            img = cv2.flip(img, 1)
 
             yield img
 
