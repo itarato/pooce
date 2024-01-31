@@ -28,6 +28,6 @@ Wishlist:
 - configurable size + frame rate
 - typing pass to be keypress granular (no enter)
 - (!) how to fix broken video device
-- (!!!) apple system compatibility
-- (!!) horizontal flip fix
+- (!) apple system compatibility
+- (!) horizontal flip fix
 - graceful exit

@@ -91,10 +91,12 @@ class PongRenderPass(OutputRenderPass):
         self.x = 10
         self.y = 10
         self.size = 16
-        self.vx = 20
-        self.vy = 20
+        self.speed = 20
+        self.vx = self.speed
+        self.vy = self.speed
 
         self.bat_x = OUT_WIDTH >> 1
+        self.bat_size = 160
         self.score = 0
 
     def render(self, img, events):
@@ -107,6 +109,14 @@ class PongRenderPass(OutputRenderPass):
         if y_candidate < 0 or y_candidate > OUT_HEIGHT:
             self.vy *= -1
 
+        if (
+            x_candidate >= (self.bat_x - (self.bat_size >> 1))
+            and x_candidate <= (self.bat_x + (self.bat_size >> 1))
+            and y_candidate >= (OUT_HEIGHT - 35)
+        ):
+            self.score += 1
+            self.vy = -self.speed
+
         self.x += self.vx
         self.y += self.vy
 
@@ -118,11 +128,23 @@ class PongRenderPass(OutputRenderPass):
 
         cv2.rectangle(
             img,
-            (self.bat_x - 50, OUT_HEIGHT - 30),
-            (self.bat_x + 50, OUT_HEIGHT),
+            (self.bat_x - (self.bat_size >> 1), OUT_HEIGHT - 30),
+            (self.bat_x + (self.bat_size >> 1), OUT_HEIGHT),
             COLOR_GREEN,
             -1,
         )
+
+        img = cv2.flip(img, 1)
+        cv2.putText(
+            img,
+            str(self.score),
+            (OUT_WIDTH - self.bat_x, OUT_HEIGHT - 8),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            COLOR_BLACK,
+            2,
+        )
+        img = cv2.flip(img, 1)
 
         return cv2.circle(img, (self.x, self.y), self.size, COLOR_GREEN, -1)
 
