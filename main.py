@@ -23,6 +23,8 @@ import time
 import signal
 import logging
 
+ARG_FPS = "--fps"
+
 OUT_WIDTH = 1280
 OUT_HEIGHT = 720
 
@@ -191,10 +193,8 @@ class PongRenderPass(OutputRenderPass):
         self.y += self.vy
 
         for event in events:
-            if event.key_code == 97 and self.bat_x < OUT_WIDTH:
-                self.bat_x += 40
-            elif event.key_code == 100 and self.bat_x > 0:
-                self.bat_x -= 40
+            if event.mouse_pos is not None:
+                self.bat_x = OUT_WIDTH - event.mouse_pos[0]
 
         cv2.rectangle(
             img,
@@ -587,15 +587,37 @@ class ControlWindow:
 
 
 #
+# Environment config collecting all env and command line args used in the app.
+#
+class EnvConfig:
+    def __init__(self):
+        self.raw_args = sys.argv
+        self.value_args = {}
+        self.flags = []
+
+        for raw_arg in self.raw_args:
+            if raw_arg.find("=") > 0:
+                parts = raw_arg.split("=")
+                self.value_args[parts[0]] = parts[1]
+            else:
+                self.flags.append(raw_arg)
+
+
+#
 # Video proxy that sets up an artificial video device and executes a list of render passes to augment it.
 #
 class VideoProxy(virtualvideo.VideoSource):
-    def __init__(self):
+    def __init__(self, config, fps):
         logging.info("Video Proxy start")
 
         self.event_queue = queue.Queue()
+        self.config = config
 
-        self.output_rect = (OUT_WIDTH, OUT_HEIGHT)
+        self.fps_value = fps
+        self.width = OUT_WIDTH
+        self.height = OUT_HEIGHT
+
+        self.output_rect = (self.width, self.height)
 
         self.videoInputOriginal = cv2.VideoCapture(IN_VIDEO_DEVICE_ID)
 
@@ -620,7 +642,7 @@ class VideoProxy(virtualvideo.VideoSource):
         return self.output_rect
 
     def fps(self):
-        return OUT_FPS
+        return self.fps_value
 
     def generator(self):
         global global_exit_flag
@@ -640,12 +662,14 @@ class VideoProxy(virtualvideo.VideoSource):
             # In PIP mode the default video is presented small in the top right corner.
             if is_pip_mode:
                 default_video_resized = cv2.resize(
-                    default_video, (OUT_WIDTH >> 2, OUT_HEIGHT >> 2)
+                    default_video, (self.width >> 2, self.height >> 2)
                 )
                 img = background.copy()
-                img[0 : (OUT_HEIGHT >> 2), 0 : (OUT_WIDTH >> 2)] = default_video_resized
+                img[
+                    0 : (self.height >> 2), 0 : (self.width >> 2)
+                ] = default_video_resized
             else:
-                img = cv2.resize(default_video, (OUT_WIDTH, OUT_HEIGHT))
+                img = cv2.resize(default_video, (self.width, self.height))
 
             # Move out accumulated UI events from the thread safe queue.
             events = []
@@ -679,7 +703,7 @@ class VideoProxy(virtualvideo.VideoSource):
                 cv2.putText(
                     img,
                     pass_name,
-                    (OUT_WIDTH - 250, OUT_HEIGHT - 20 - (i * 20)),
+                    (self.width - 250, self.height - 20 - (i * 20)),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.5,
                     COLOR_WHITE,
@@ -694,8 +718,11 @@ class VideoProxy(virtualvideo.VideoSource):
 # CTRL-C handler.
 signal.signal(signal.SIGINT, sig_interrupt_handler)
 
+config = EnvConfig()
+fps = config.value_args.get(ARG_FPS) or OUT_FPS
+
 # Setup app.
 video_device = virtualvideo.FakeVideoDevice()
-video_device.init_input(VideoProxy())
-video_device.init_output(OUT_VIDEO_DEVICE_ID, OUT_WIDTH, OUT_HEIGHT, fps=OUT_FPS)
+video_device.init_input(VideoProxy(config, fps))
+video_device.init_output(OUT_VIDEO_DEVICE_ID, OUT_WIDTH, OUT_HEIGHT, fps)
 video_device.run()
