@@ -2,6 +2,8 @@
 
 Video proxy learning project: a video output stream (~webcam) that is programmable in Python.
 
+![Screenshot](misc/screenshot.png)
+
 ## Setup
 
 - `sudo apt install v4l2loopback-utils`
