@@ -1,6 +1,6 @@
-# POOCE V0
+# Video Proxy
 
-Video proxy learning project.
+Video proxy learning project: a video output stream (~webcam) that is programmable in Python.
 
 - https://github.com/Flashs/virtualvideo
 - https://github.com/umlaeute/v4l2loopback
@@ -10,7 +10,7 @@ Video proxy learning project.
 - `python -m venv ./.venv`
 - `. .venv/bin/activate`
 - `pip install -r requirements.txt`
-- `python pooce.py`
+- `python main.py`
 
 ## Controls
 
