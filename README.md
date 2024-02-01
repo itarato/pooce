@@ -35,6 +35,7 @@ Video proxy learning project: a video output stream (~webcam) that is programmab
 - template recognition drawing
 - shell command watchdog
 - mouse drawing
+- morse code translator
 
 ## Wishlist
 
@@ -45,7 +46,6 @@ Video proxy learning project: a video output stream (~webcam) that is programmab
 - typing pass to be keypress granular (no enter)
 - (!) apple system compatibility
 - (!) horizontal flip fix
-- morse plugin
 
 ## Troubleshooting
 
