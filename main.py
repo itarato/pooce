@@ -42,6 +42,7 @@ COLOR_WHITE = (255, 255, 255)
 COLOR_PURPLE = (255, 0, 255)
 COLOR_RED = (0, 0, 255)
 COLOR_LAGUNA_BLUE = (255, 255, 0)
+COLOR_MAGENTA = (255, 0, 255)
 
 # For main event handling.
 EVENT_MOUSE_LEFT_DOWN = 1
@@ -51,6 +52,9 @@ EVENT_MOUSE_MIDDLE_DOWN = 3
 # Mask to control which output renderer is enabled.
 OUTPUT_RENDER_PASS_MASK_ALL = ~0
 OUTPUT_RENDER_PASS_MASK_NONE = 0
+
+# Dot value (x and y) that acts a no-draw/-follow marker.
+DISCONTINUATION_DOT = -1
 
 # For SIGINT to signal everyone.
 global_exit_flag = False
@@ -65,10 +69,12 @@ logging.basicConfig(level=logging.NOTSET)
 
 def sig_interrupt_handler(sig, frame):
     global global_exit_flag
+    logging.info("Waiting for processes to finish")
+
     global_exit_flag = True
 
     time.sleep(1)
-    logging.info("Exiting Pooce")
+    logging.info("Exiting Video Proxy")
 
     sys.exit(0)
 
@@ -106,6 +112,9 @@ class SimpleDotDrawer(DotDrawer):
         self.color = color
 
     def record(self, x, y):
+        if x == DISCONTINUATION_DOT or y == DISCONTINUATION_DOT:
+            return
+
         self.map[(OUT_WIDTH * y) + x] = 1
 
     def draw(self, img):
@@ -122,8 +131,9 @@ class SimpleDotDrawer(DotDrawer):
 # Dot drawer that draws lines using the received sequence of dots.
 #
 class LineDrawer(DotDrawer):
-    def __init__(self):
+    def __init__(self, color=COLOR_RED):
         self.sequence = []
+        self.color = color
 
     def record(self, x, y):
         self.sequence.append((x, y))
@@ -133,7 +143,13 @@ class LineDrawer(DotDrawer):
             return
 
         for i in range(len(self.sequence) - 1):
-            cv2.line(img, self.sequence[i], self.sequence[i + 1], COLOR_RED, 4)
+            if (
+                DISCONTINUATION_DOT in self.sequence[i]
+                or DISCONTINUATION_DOT in self.sequence[i + 1]
+            ):
+                continue
+
+            cv2.line(img, self.sequence[i], self.sequence[i + 1], self.color, 4)
 
     def reset(self):
         self.sequence.clear()
@@ -519,7 +535,7 @@ class RedDotDrawRenderPass(OutputRenderPass):
 class MouseDrawRenderPass(OutputRenderPass):
     def __init__(self):
         self.is_mouse_down = False
-        self.drawer = SimpleDotDrawer(COLOR_LAGUNA_BLUE)
+        self.drawer = LineDrawer(COLOR_MAGENTA)
         self.last_pos = (0, 0)
 
     def name(self):
@@ -531,6 +547,7 @@ class MouseDrawRenderPass(OutputRenderPass):
                 self.is_mouse_down = True
             elif event.mouse_click == EVENT_MOUSE_LEFT_UP:
                 self.is_mouse_down = False
+                self.drawer.record(DISCONTINUATION_DOT, DISCONTINUATION_DOT)
             elif event.mouse_click == EVENT_MOUSE_MIDDLE_DOWN:
                 self.drawer.reset()
             elif event.mouse_pos is not None:
