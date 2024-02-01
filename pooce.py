@@ -191,10 +191,10 @@ class PongRenderPass(OutputRenderPass):
         self.y += self.vy
 
         for event in events:
-            if event.key_code == 97:
-                self.bat_x += 20
-            elif event.key_code == 100:
-                self.bat_x -= 20
+            if event.key_code == 97 and self.bat_x < OUT_WIDTH:
+                self.bat_x += 40
+            elif event.key_code == 100 and self.bat_x > 0:
+                self.bat_x -= 40
 
         cv2.rectangle(
             img,
