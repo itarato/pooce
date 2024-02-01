@@ -32,6 +32,7 @@ Video proxy learning project: a video output stream (~webcam) that is programmab
 - game (pong)
 - car recognition drawing
 - red dot recognition drawing
+- template recognition drawing
 - shell command watchdog
 - mouse drawing
 
@@ -44,12 +45,15 @@ Video proxy learning project: a video output stream (~webcam) that is programmab
 - typing pass to be keypress granular (no enter)
 - (!) apple system compatibility
 - (!) horizontal flip fix
+- morse plugin
 
 ## Troubleshooting
 
 ### Video is blocked
 
 Start a video call session with the default video first and then only with the fake device and make sure to allow both separately.
+
+Also make sure nothing uses the video stream before the first use after boot (eg browser restored state).
 
 ### Video device error
 
