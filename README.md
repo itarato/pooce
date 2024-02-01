@@ -36,6 +36,7 @@ Video proxy learning project: a video output stream (~webcam) that is programmab
 - shell command watchdog
 - mouse drawing
 - morse code translator
+- countdown
 
 ## Wishlist
 

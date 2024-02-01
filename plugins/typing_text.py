@@ -1,6 +1,4 @@
-import select
 import cv2
-import sys
 
 from conf import *
 from shared import *
@@ -18,16 +16,8 @@ class TypingTextRenderPass(OutputRenderPass):
         return "STDIN typing"
 
     def render(self, img, events):
-        if select.select(
-            [
-                sys.stdin,
-            ],
-            [],
-            [],
-            0.0,
-        )[0]:
-            line = sys.stdin.readline().strip()
-
+        line = non_block_stdin_get_line()
+        if line is not None:
             if line == "/clear":
                 self.texts.clear()
             else:

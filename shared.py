@@ -1,4 +1,7 @@
 import cv2
+import sys
+import select
+
 from conf import *
 
 
@@ -89,3 +92,17 @@ class OutputRenderPass:
 
     def render(self, img, events):
         NotImplementedError("Must be implemented")
+
+
+def non_block_stdin_get_line():
+    if select.select(
+        [
+            sys.stdin,
+        ],
+        [],
+        [],
+        0.0,
+    )[0]:
+        return sys.stdin.readline().strip()
+    else:
+        return None

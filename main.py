@@ -33,6 +33,7 @@ from plugins.dot_detection import RedDotDrawRenderPass
 from plugins.template_detection import TemplateRecognitionDrawRenderPass
 from plugins.mouse_drawing import MouseDrawRenderPass
 from plugins.morse_code import MorseCodeRenderPass
+from plugins.timer import TimerRenderPass
 
 logging.basicConfig()
 logging.root.setLevel(logging.NOTSET)
@@ -126,6 +127,7 @@ class VideoProxy(virtualvideo.VideoSource):
         self.videoInputOriginal = cv2.VideoCapture(IN_VIDEO_DEVICE_ID)
 
         self.output_render_passes = [
+            StaticTextRenderPass("Video Proxy Demo v0.1"),
             RandomFlashRenderPass(),
             TypingTextRenderPass(),
             MorseCodeRenderPass(),
@@ -133,10 +135,10 @@ class VideoProxy(virtualvideo.VideoSource):
             ShellWatcherRenderPass(["vmstat"], 10, 8),
             ShellWatcherRenderPass(["cat", "experiment/notepad.txt"], 10, 300, 30),
             MouseDrawRenderPass(),
+            TimerRenderPass(),
             TemplateRecognitionDrawRenderPass(),
             RedDotDrawRenderPass(LineDrawer()),
             CarDrawRenderPass(),
-            StaticTextRenderPass("Video Proxy Demo v0.1"),
         ]
         for i, render_pass in enumerate(self.output_render_passes):
             logging.info("Pass #" + str(i) + ": " + render_pass.name())
@@ -154,7 +156,7 @@ class VideoProxy(virtualvideo.VideoSource):
         global global_exit_flag
         global background
 
-        output_render_pass_mask = 1 << 10
+        output_render_pass_mask = 1
         is_pip_mode = False
 
         while not global_exit_flag:

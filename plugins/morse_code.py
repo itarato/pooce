@@ -1,5 +1,3 @@
-import select
-import sys
 import cv2
 
 from conf import *
@@ -52,15 +50,8 @@ class MorseCodeRenderPass(OutputRenderPass):
         return "Morse code"
 
     def render(self, img, events):
-        if select.select(
-            [
-                sys.stdin,
-            ],
-            [],
-            [],
-            0.0,
-        )[0]:
-            line = sys.stdin.readline().strip()
+        line = non_block_stdin_get_line()
+        if line is not None:
             for c in line:
                 c = c.lower()
                 if c >= "a" and c <= "z":

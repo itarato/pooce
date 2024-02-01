@@ -29,7 +29,7 @@ EVENT_MOUSE_MIDDLE_DOWN = 3
 
 # Mask to control which output renderer is enabled.
 OUTPUT_RENDER_PASS_MASK_ALL = ~0
-OUTPUT_RENDER_PASS_MASK_NONE = 1 << 10  # Have the demo logo shown.
+OUTPUT_RENDER_PASS_MASK_NONE = 1  # Have the demo logo shown.
 
 # Dot value (x and y) that acts a no-draw/-follow marker.
 DISCONTINUATION_DOT = -1
