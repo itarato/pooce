@@ -1,2 +1,4 @@
 .venv
 experiment
+__pycache__
+plugins/__pycache__
