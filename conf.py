@@ -6,7 +6,7 @@ OUT_WIDTH = 1280
 OUT_HEIGHT = 720
 
 # Target frame per seconds (not guaranteed).
-OUT_FPS = 60
+OUT_FPS = 30
 
 # Linux device numbers (/dev/video?).
 IN_VIDEO_DEVICE_ID = 0
@@ -39,7 +39,8 @@ global_exit_flag = False
 # Default background.
 background = numpy.zeros((OUT_HEIGHT, OUT_WIDTH, 3), numpy.uint8)
 
-class Config():
+
+class Config:
     def __init__(self) -> None:
         self.hpadding = 200
 
@@ -57,9 +58,9 @@ class Config():
 
     def hcenter(self) -> int:
         return int((OUT_WIDTH >> 1))
-    
+
     def relx(self, rel: float) -> int:
         return int(self.active_area_left_border() + self.active_area_width() * rel)
-    
+
     def rely(self, rel: float) -> int:
         return int(self.active_area_height() * rel)

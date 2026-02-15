@@ -1,10 +1,6 @@
-import colorsys
 import pyvirtualcam
 import cv2
-import select
 import sys
-import numpy
-import threading
 import queue
 import time
 import signal
@@ -12,6 +8,7 @@ import logging
 
 from conf import *
 from shared import *
+from control_window import *
 from plugins.pong import PongRenderPass
 from plugins.rain import RandomFlashRenderPass
 from plugins.static_text import StaticTextRenderPass
@@ -43,45 +40,6 @@ def sig_interrupt_handler(sig, frame):
 
 
 #
-# App level control window for event collection (mouse and keyboard).
-#
-class ControlWindow:
-    def __init__(self, event_queue: queue.Queue):
-        self.window_name = "pooce-mouse"
-        self.event_queue = event_queue
-        # threading.Thread(target=self.window_thread).start()
-
-    def start_window(self):
-        cv2.namedWindow(self.window_name)
-        cv2.setMouseCallback(self.window_name, self.on_mouse_event)
-
-    def finish_window(self):
-        cv2.destroyAllWindows()
-
-    def update_window(self):
-        global background
-
-        cv2.imshow(self.window_name, background)
-        key_code = cv2.waitKey(20) & 0xFF
-
-        if key_code == 27:
-            return
-
-        if key_code > 0:
-            self.event_queue.put(Event(key_code=key_code))
-
-    def on_mouse_event(self, event, x, y, flags, param):
-        if event == cv2.EVENT_LBUTTONDOWN:
-            self.event_queue.put(Event(mouse_click=EVENT_MOUSE_LEFT_DOWN))
-        elif event == cv2.EVENT_LBUTTONUP:
-            self.event_queue.put(Event(mouse_click=EVENT_MOUSE_LEFT_UP))
-        elif event == cv2.EVENT_MBUTTONDOWN:
-            self.event_queue.put(Event(mouse_click=EVENT_MOUSE_MIDDLE_DOWN))
-
-        self.event_queue.put(Event(mouse_pos=(x, y)))
-
-
-#
 # Environment config collecting all env and command line args used in the app.
 #
 class EnvConfig:
@@ -97,7 +55,8 @@ class EnvConfig:
             else:
                 self.flags.append(raw_arg)
 
-class VideoProxy():
+
+class VideoProxy:
     def __init__(self, env_config: EnvConfig, fps):
         logging.info("Video Proxy start")
 
@@ -130,9 +89,8 @@ class VideoProxy():
         for i, render_pass in enumerate(self.output_render_passes):
             logging.info("Pass #" + str(i) + ": " + render_pass.name())
 
-        # To keep window thread alive.
-        self.__control_window = ControlWindow(self.event_queue)
-        self.__control_window.start_window()
+        self.control_window = ControlWindow(self.event_queue)
+        self.control_window.start_window()
 
     def img_size(self):
         return self.output_rect
@@ -147,11 +105,13 @@ class VideoProxy():
         output_render_pass_mask = 1
         is_pip_mode = False
 
-        with pyvirtualcam.Camera(width=OUT_WIDTH, height=OUT_HEIGHT, fps=OUT_FPS) as cam:
-            logging.info(f'Using virtual camera: {cam.device}')
+        with pyvirtualcam.Camera(
+            width=OUT_WIDTH, height=OUT_HEIGHT, fps=OUT_FPS
+        ) as cam:
+            logging.info(f"Using virtual camera: {cam.device}")
 
             while not global_exit_flag:
-                self.__control_window.update_window()
+                self.control_window.update_window()
 
                 # Read the system default (0) video stream frame.
                 rval, default_video = self.videoInputOriginal.read()
@@ -166,9 +126,9 @@ class VideoProxy():
                         default_video, (self.width >> 2, self.height >> 2)
                     )
                     img = background.copy()
-                    img[
-                        0 : (self.height >> 2), 0 : (self.width >> 2)
-                    ] = default_video_resized
+                    img[0 : (self.height >> 2), 0 : (self.width >> 2)] = (
+                        default_video_resized
+                    )
                 else:
                     img = cv2.resize(default_video, (self.width, self.height))
 
@@ -215,7 +175,7 @@ class VideoProxy():
                 cam.send(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
                 cam.sleep_until_next_frame()
 
-            self.__control_window.finish_window()
+            self.control_window.finish_window()
 
 
 # CTRL-C handler.
