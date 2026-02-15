@@ -16,7 +16,7 @@ class MouseDrawRenderPass(OutputRenderPass):
     def name(self):
         return "Mouse drawing"
 
-    def render(self, img, events):
+    def render(self, img, events, config: Config):
         for event in events:
             if event.mouse_click == EVENT_MOUSE_LEFT_DOWN:
                 self.is_mouse_down = True

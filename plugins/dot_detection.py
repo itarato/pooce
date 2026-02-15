@@ -18,7 +18,7 @@ class RedDotDrawRenderPass(OutputRenderPass):
     def name(self):
         return "Red dot recognition (drawing)"
 
-    def render(self, img, events):
+    def render(self, img, events, config: Config):
         for event in events:
             if event.mouse_click == EVENT_MOUSE_MIDDLE_DOWN:
                 self.drawer.reset()

@@ -49,7 +49,7 @@ class MorseCodeRenderPass(OutputRenderPass):
     def name(self):
         return "Morse code"
 
-    def render(self, img, events):
+    def render(self, img, events, config: Config):
         line = non_block_stdin_get_line()
         if line is not None:
             for c in line:
@@ -70,6 +70,6 @@ class MorseCodeRenderPass(OutputRenderPass):
                 self.queue = self.queue[1:]
 
         if self.counter >= self.tick_gap and self.queue[0] != -1:
-            cv2.circle(img, (OUT_WIDTH >> 1, OUT_HEIGHT - 100), 42, COLOR_ORANGE, -1)
+            cv2.circle(img, (config.hcenter(), config.active_area_height() - 100), 42, COLOR_ORANGE, -1)
 
         return img

@@ -7,8 +7,8 @@ from shared import *
 #
 class PongRenderPass(OutputRenderPass):
     def __init__(self):
-        self.x = 10
-        self.y = 10
+        self.x = OUT_WIDTH >> 1
+        self.y = OUT_HEIGHT >> 1
         self.size = 16
         self.speed = 20
         self.vx = self.speed
@@ -21,20 +21,20 @@ class PongRenderPass(OutputRenderPass):
     def name(self):
         return "Pong (game)"
 
-    def render(self, img, events):
+    def render(self, img, events: list[Event], config: Config):
         x_candidate = self.x + self.vx
         y_candidate = self.y + self.vy
 
-        if x_candidate < 0 or x_candidate > OUT_WIDTH:
+        if x_candidate < config.active_area_left_border() or x_candidate > config.active_area_right_border():
             self.vx *= -1
 
-        if y_candidate < 0 or y_candidate > OUT_HEIGHT:
+        if y_candidate < 0 or y_candidate > config.active_area_height():
             self.vy *= -1
 
         if (
             x_candidate >= (self.bat_x - (self.bat_size >> 1))
             and x_candidate <= (self.bat_x + (self.bat_size >> 1))
-            and y_candidate >= (OUT_HEIGHT - 35)
+            and y_candidate >= (config.active_area_height() - 35)
         ):
             self.score += 1
             self.vy = -self.speed
@@ -43,13 +43,13 @@ class PongRenderPass(OutputRenderPass):
         self.y += self.vy
 
         for event in events:
-            if event.mouse_pos is not None:
-                self.bat_x = OUT_WIDTH - event.mouse_pos[0]
+            if event.is_mouse_event():
+                self.bat_x = config.relx(1.0 - event.mouse_x_rel())
 
         cv2.rectangle(
             img,
-            (self.bat_x - (self.bat_size >> 1), OUT_HEIGHT - 30),
-            (self.bat_x + (self.bat_size >> 1), OUT_HEIGHT),
+            (self.bat_x - (self.bat_size >> 1), config.active_area_height() - 30),
+            (self.bat_x + (self.bat_size >> 1), config.active_area_height()),
             COLOR_GREEN,
             -1,
         )
@@ -58,7 +58,7 @@ class PongRenderPass(OutputRenderPass):
         cv2.putText(
             img,
             "Score: " + str(self.score),
-            (OUT_WIDTH - self.bat_x - (self.bat_size >> 1), OUT_HEIGHT - 6),
+            (OUT_WIDTH - self.bat_x - (self.bat_size >> 1), config.active_area_height() - 6),
             cv2.FONT_HERSHEY_SIMPLEX,
             1,
             COLOR_BLACK,

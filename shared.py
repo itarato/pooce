@@ -14,6 +14,15 @@ class Event:
         self.mouse_click = mouse_click
         self.key_code = key_code
 
+    def is_mouse_event(self):
+        return self.mouse_pos is not None
+    
+    def mouse_x_rel(self) -> float:
+        return self.mouse_pos[0] / OUT_WIDTH
+    
+    def mouse_y_rel(self) -> float:
+        return self.mouse_pos[1] / OUT_HEIGHT
+
 
 #
 # Drawing interface for dot level painting (each input is a single coordinate).

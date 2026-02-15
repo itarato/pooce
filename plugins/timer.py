@@ -14,7 +14,7 @@ class TimerRenderPass(OutputRenderPass):
     def name(self):
         return "Timer"
 
-    def render(self, img, events):
+    def render(self, img, events, config: Config):
         line = non_block_stdin_get_line()
         if line is not None:
             seconds = int(line)

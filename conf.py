@@ -10,7 +10,6 @@ OUT_FPS = 60
 
 # Linux device numbers (/dev/video?).
 IN_VIDEO_DEVICE_ID = 0
-OUT_VIDEO_DEVICE_ID = 2
 
 COLOR_BLACK = (0, 0, 0)
 COLOR_GREEN = (0, 255, 0)
@@ -39,3 +38,28 @@ global_exit_flag = False
 
 # Default background.
 background = numpy.zeros((OUT_HEIGHT, OUT_WIDTH, 3), numpy.uint8)
+
+class Config():
+    def __init__(self) -> None:
+        self.hpadding = 200
+
+    def active_area_width(self) -> int:
+        return int(OUT_WIDTH - (self.hpadding << 1))
+
+    def active_area_left_border(self) -> int:
+        return int(self.hpadding)
+
+    def active_area_right_border(self) -> int:
+        return int(OUT_WIDTH - self.hpadding)
+
+    def active_area_height(self) -> int:
+        return int(OUT_HEIGHT)
+
+    def hcenter(self) -> int:
+        return int((OUT_WIDTH >> 1))
+    
+    def relx(self, rel: float) -> int:
+        return int(self.active_area_left_border() + self.active_area_width() * rel)
+    
+    def rely(self, rel: float) -> int:
+        return int(self.active_area_height() * rel)

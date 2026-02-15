@@ -22,7 +22,7 @@ class CarDrawRenderPass(OutputRenderPass):
     def name(self):
         return "Car recognition (drawing)"
 
-    def render(self, img, events):
+    def render(self, img, events, config: Config):
         blob = cv2.dnn.blobFromImage(img, 0.007843, (300, 300), 127.5)
         h, w = img.shape[:2]
         self.net.setInput(blob)

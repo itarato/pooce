@@ -23,7 +23,7 @@ class ShellWatcherRenderPass(OutputRenderPass):
     def name(self):
         return "Shell command (" + " ".join(self.cmd_parts) + ")"
 
-    def render(self, img, events):
+    def render(self, img, events, config: Config):
         if self.counter >= self.frequency:
             self.counter = 0
 

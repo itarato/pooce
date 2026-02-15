@@ -1,16 +1,5 @@
-"""
-Pooce - A Python video proxy
-
-Pooce is an artificial video output stream that allows interaction (plugins).
-It works in a very simple way: it opens a video device and puts a renderable frame onto the output. This frame
-is a copy of the default available video device (existing webcam).
-The output is handed over to a list of programmable passes (output render passes) before the
-final return.
-
-Currently only supported on Linux.
-"""
-
-import virtualvideo
+import colorsys
+import pyvirtualcam
 import cv2
 import select
 import sys
@@ -34,6 +23,7 @@ from plugins.template_detection import TemplateRecognitionDrawRenderPass
 from plugins.mouse_drawing import MouseDrawRenderPass
 from plugins.morse_code import MorseCodeRenderPass
 from plugins.timer import TimerRenderPass
+
 
 logging.basicConfig()
 logging.root.setLevel(logging.NOTSET)
@@ -59,26 +49,26 @@ class ControlWindow:
     def __init__(self, event_queue: queue.Queue):
         self.window_name = "pooce-mouse"
         self.event_queue = event_queue
-        threading.Thread(target=self.window_thread).start()
+        # threading.Thread(target=self.window_thread).start()
 
-    def window_thread(self):
-        global global_exit_flag
-        global background
-
+    def start_window(self):
         cv2.namedWindow(self.window_name)
         cv2.setMouseCallback(self.window_name, self.on_mouse_event)
 
-        while not global_exit_flag:
-            cv2.imshow(self.window_name, background)
-            key_code = cv2.waitKey(20) & 0xFF
-
-            if key_code == 27:
-                break
-
-            if key_code > 0:
-                self.event_queue.put(Event(key_code=key_code))
-
+    def finish_window(self):
         cv2.destroyAllWindows()
+
+    def update_window(self):
+        global background
+
+        cv2.imshow(self.window_name, background)
+        key_code = cv2.waitKey(20) & 0xFF
+
+        if key_code == 27:
+            return
+
+        if key_code > 0:
+            self.event_queue.put(Event(key_code=key_code))
 
     def on_mouse_event(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
@@ -107,16 +97,13 @@ class EnvConfig:
             else:
                 self.flags.append(raw_arg)
 
-
-#
-# Video proxy that sets up an artificial video device and executes a list of render passes to augment it.
-#
-class VideoProxy(virtualvideo.VideoSource):
-    def __init__(self, config, fps):
+class VideoProxy():
+    def __init__(self, env_config: EnvConfig, fps):
         logging.info("Video Proxy start")
 
         self.event_queue = queue.Queue()
-        self.config = config
+        self.env_config = env_config
+        self.config = Config()
 
         self.fps_value = fps
         self.width = OUT_WIDTH
@@ -127,17 +114,17 @@ class VideoProxy(virtualvideo.VideoSource):
         self.videoInputOriginal = cv2.VideoCapture(IN_VIDEO_DEVICE_ID)
 
         self.output_render_passes = [
-            StaticTextRenderPass("Video Proxy Demo v0.1"),
+            StaticTextRenderPass("Video Proxy Demo v0.2"),
             RandomFlashRenderPass(),
             TypingTextRenderPass(),
             MorseCodeRenderPass(),
             PongRenderPass(),
-            ShellWatcherRenderPass(["vmstat"], 10, 8),
+            ShellWatcherRenderPass(["vm_stat"], 10, 8),
             ShellWatcherRenderPass(["cat", "experiment/notepad.txt"], 10, 300, 30),
             MouseDrawRenderPass(),
             TimerRenderPass(),
-            TemplateRecognitionDrawRenderPass(),
             RedDotDrawRenderPass(LineDrawer()),
+            TemplateRecognitionDrawRenderPass(),
             CarDrawRenderPass(),
         ]
         for i, render_pass in enumerate(self.output_render_passes):
@@ -145,6 +132,7 @@ class VideoProxy(virtualvideo.VideoSource):
 
         # To keep window thread alive.
         self.__control_window = ControlWindow(self.event_queue)
+        self.__control_window.start_window()
 
     def img_size(self):
         return self.output_rect
@@ -152,75 +140,82 @@ class VideoProxy(virtualvideo.VideoSource):
     def fps(self):
         return self.fps_value
 
-    def generator(self):
+    def run(self):
         global global_exit_flag
         global background
 
         output_render_pass_mask = 1
         is_pip_mode = False
 
-        while not global_exit_flag:
-            # Read the system default (0) video stream frame.
-            rval, default_video = self.videoInputOriginal.read()
-            if not rval:
-                logging.error("Failed retrieving default video stream frame")
-                global_exit_flag = True
-                break
+        with pyvirtualcam.Camera(width=OUT_WIDTH, height=OUT_HEIGHT, fps=OUT_FPS) as cam:
+            logging.info(f'Using virtual camera: {cam.device}')
 
-            # In PIP mode the default video is presented small in the top right corner.
-            if is_pip_mode:
-                default_video_resized = cv2.resize(
-                    default_video, (self.width >> 2, self.height >> 2)
-                )
-                img = background.copy()
-                img[
-                    0 : (self.height >> 2), 0 : (self.width >> 2)
-                ] = default_video_resized
-            else:
-                img = cv2.resize(default_video, (self.width, self.height))
+            while not global_exit_flag:
+                self.__control_window.update_window()
 
-            # Move out accumulated UI events from the thread safe queue.
-            events = []
-            while self.event_queue.qsize() > 0:
-                event = self.event_queue.get()
-                events.append(event)
+                # Read the system default (0) video stream frame.
+                rval, default_video = self.videoInputOriginal.read()
+                if not rval:
+                    logging.error("Failed retrieving default video stream frame")
+                    global_exit_flag = True
+                    break
 
-                # React on main app events (if there is any).
-                key_code = event.key_code
-                if key_code is not None and key_code > 0:
-                    if key_code == 45:  # Key: -
-                        output_render_pass_mask = OUTPUT_RENDER_PASS_MASK_ALL
-                    elif key_code == 96:  # Key: `
-                        output_render_pass_mask = OUTPUT_RENDER_PASS_MASK_NONE
-                    elif key_code >= 48 and key_code <= 57:  # Key: 0..9
-                        output_render_pass_mask ^= 1 << (key_code - 48)
-                    elif key_code == 112:  # Key: p
-                        is_pip_mode = not is_pip_mode
+                # In PIP mode the default video is presented small in the top right corner.
+                if is_pip_mode:
+                    default_video_resized = cv2.resize(
+                        default_video, (self.width >> 2, self.height >> 2)
+                    )
+                    img = background.copy()
+                    img[
+                        0 : (self.height >> 2), 0 : (self.width >> 2)
+                    ] = default_video_resized
+                else:
+                    img = cv2.resize(default_video, (self.width, self.height))
 
-            # Execute render passes.
-            used_passes = []
-            for i, output_render_pass in enumerate(self.output_render_passes):
-                pass_mask = 1 << i
-                if output_render_pass_mask & pass_mask > 0:
-                    img = output_render_pass.render(img, events)
-                    used_passes.append(output_render_pass.name())
+                # Move out accumulated UI events from the thread safe queue.
+                events = []
+                while self.event_queue.qsize() > 0:
+                    event = self.event_queue.get()
+                    events.append(event)
 
-            # Printing active passes on the screen.
-            img = cv2.flip(img, 1)
-            for i, pass_name in enumerate(used_passes):
-                cv2.putText(
-                    img,
-                    pass_name,
-                    (self.width - 250, self.height - 20 - (i * 20)),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.5,
-                    COLOR_WHITE,
-                    2,
-                )
-            img = cv2.flip(img, 1)
+                    # React on main app events (if there is any).
+                    key_code = event.key_code
+                    if key_code is not None and key_code > 0:
+                        if key_code == 45:  # Key: -
+                            output_render_pass_mask = OUTPUT_RENDER_PASS_MASK_ALL
+                        elif key_code == 96:  # Key: `
+                            output_render_pass_mask = OUTPUT_RENDER_PASS_MASK_NONE
+                        elif key_code >= 48 and key_code <= 57:  # Key: 0..9
+                            output_render_pass_mask ^= 1 << (key_code - 48)
+                        elif key_code == 112:  # Key: p
+                            is_pip_mode = not is_pip_mode
 
-            # Present frame to the fake device.
-            yield img
+                # Execute render passes.
+                used_passes = []
+                for i, output_render_pass in enumerate(self.output_render_passes):
+                    pass_mask = 1 << i
+                    if output_render_pass_mask & pass_mask > 0:
+                        img = output_render_pass.render(img, events, self.config)
+                        used_passes.append(output_render_pass.name())
+
+                # Printing active passes on the screen.
+                img = cv2.flip(img, 1)
+                for i, pass_name in enumerate(used_passes):
+                    cv2.putText(
+                        img,
+                        pass_name,
+                        (self.width - 250, self.height - 20 - (i * 20)),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.5,
+                        COLOR_WHITE,
+                        2,
+                    )
+                img = cv2.flip(img, 1)
+
+                cam.send(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+                cam.sleep_until_next_frame()
+
+            self.__control_window.finish_window()
 
 
 # CTRL-C handler.
@@ -229,8 +224,5 @@ signal.signal(signal.SIGINT, sig_interrupt_handler)
 config = EnvConfig()
 fps = config.value_args.get(ARG_FPS) or OUT_FPS
 
-# Setup app.
-video_device = virtualvideo.FakeVideoDevice()
-video_device.init_input(VideoProxy(config, fps))
-video_device.init_output(OUT_VIDEO_DEVICE_ID, OUT_WIDTH, OUT_HEIGHT, fps)
-video_device.run()
+vp = VideoProxy(config, fps)
+vp.run()

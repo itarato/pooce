@@ -13,7 +13,7 @@ class RandomFlashRenderPass(OutputRenderPass):
     def name(self):
         return "Rain (animation)"
 
-    def render(self, img, events):
+    def render(self, img, events, config: Config):
         if random.random() < 0.4:
             self.drops[random.randrange(0, OUT_WIDTH)] = 0
 
