@@ -14,8 +14,6 @@ class StaticTextRenderPass(OutputRenderPass):
         return "Static text"
 
     def render(self, img, events, config: Config):
-        img = cv2.flip(img, 1)
-
         cv2.putText(
             img,
             self.text,
@@ -27,4 +25,4 @@ class StaticTextRenderPass(OutputRenderPass):
             cv2.LINE_AA,
         )
 
-        return cv2.flip(img, 1)
+        return img

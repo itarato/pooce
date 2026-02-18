@@ -10,7 +10,7 @@ from shared import *
 class MouseDrawRenderPass(OutputRenderPass):
     def __init__(self):
         self.is_mouse_down = False
-        self.drawer = LineDrawer(COLOR_MAGENTA)
+        self.drawer = LineDrawer(COLOR_ORANGE)
         self.last_pos = (0, 0)
 
     def name(self):
@@ -27,11 +27,9 @@ class MouseDrawRenderPass(OutputRenderPass):
                 self.drawer.reset()
             elif event.mouse_pos is not None:
                 if self.is_mouse_down:
-                    self.drawer.record(
-                        OUT_WIDTH - event.mouse_pos[0], event.mouse_pos[1]
-                    )
+                    self.drawer.record(event.mouse_pos[0], event.mouse_pos[1])
 
-                self.last_pos = (OUT_WIDTH - event.mouse_pos[0], event.mouse_pos[1])
+                self.last_pos = (event.mouse_pos[0], event.mouse_pos[1])
 
         self.drawer.draw(img)
         cv2.circle(img, self.last_pos, 8, COLOR_WHITE, 4)

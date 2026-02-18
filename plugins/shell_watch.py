@@ -9,7 +9,7 @@ from shared import *
 # Render pass that can execute a shell command and paint STDOUT to the frame.
 #
 class ShellWatcherRenderPass(OutputRenderPass):
-    def __init__(self, cmd_parts, frequency=10, x=OUT_WIDTH >> 1, y=OUT_HEIGHT >> 1):
+    def __init__(self, cmd_parts, frequency=30, x=OUT_WIDTH >> 1, y=OUT_HEIGHT >> 1):
         self.cmd_parts = cmd_parts
 
         # To limit drawing to every frequency-th frame.
@@ -33,8 +33,6 @@ class ShellWatcherRenderPass(OutputRenderPass):
         else:
             self.counter += 1
 
-        img = cv2.flip(img, 1)
-
         for i, line in enumerate(self.output):
             cv2.putText(
                 img,
@@ -56,7 +54,5 @@ class ShellWatcherRenderPass(OutputRenderPass):
                 2,
                 cv2.LINE_AA,
             )
-
-        img = cv2.flip(img, 1)
 
         return img

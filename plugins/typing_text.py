@@ -23,8 +23,6 @@ class TypingTextRenderPass(OutputRenderPass):
             else:
                 self.texts.append(line)
 
-        img = cv2.flip(img, 1)
-
         for i, text in enumerate(self.texts):
             cv2.putText(
                 img,
@@ -47,4 +45,4 @@ class TypingTextRenderPass(OutputRenderPass):
                 cv2.LINE_AA,
             )
 
-        return cv2.flip(img, 1)
+        return img

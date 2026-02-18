@@ -27,7 +27,6 @@ class TimerRenderPass(OutputRenderPass):
             else:
                 text = "Timer completed"
 
-            img = cv2.flip(img, 1)
             cv2.putText(
                 img,
                 text,
@@ -37,6 +36,5 @@ class TimerRenderPass(OutputRenderPass):
                 COLOR_ORANGE,
                 2,
             )
-            img = cv2.flip(img, 1)
 
         return img

@@ -25,7 +25,10 @@ class PongRenderPass(OutputRenderPass):
         x_candidate = self.x + self.vx
         y_candidate = self.y + self.vy
 
-        if x_candidate < config.active_area_left_border() or x_candidate > config.active_area_right_border():
+        if (
+            x_candidate < config.active_area_left_border()
+            or x_candidate > config.active_area_right_border()
+        ):
             self.vx *= -1
 
         if y_candidate < 0 or y_candidate > config.active_area_height():
@@ -44,7 +47,7 @@ class PongRenderPass(OutputRenderPass):
 
         for event in events:
             if event.is_mouse_event():
-                self.bat_x = config.relx(1.0 - event.mouse_x_rel())
+                self.bat_x = config.relx(event.mouse_x_rel())
 
         cv2.rectangle(
             img,
@@ -54,16 +57,17 @@ class PongRenderPass(OutputRenderPass):
             -1,
         )
 
-        img = cv2.flip(img, 1)
         cv2.putText(
             img,
             "Score: " + str(self.score),
-            (OUT_WIDTH - self.bat_x - (self.bat_size >> 1), config.active_area_height() - 6),
+            (
+                self.bat_x - (self.bat_size >> 1),
+                config.active_area_height() - 6,
+            ),
             cv2.FONT_HERSHEY_SIMPLEX,
             1,
             COLOR_BLACK,
             2,
         )
-        img = cv2.flip(img, 1)
 
         return cv2.circle(img, (self.x, self.y), self.size, COLOR_GREEN, -1)

@@ -78,8 +78,8 @@ class VideoProxy:
             TypingTextRenderPass(),
             MorseCodeRenderPass(),
             PongRenderPass(),
-            ShellWatcherRenderPass(["vmstat"], 10, 8),
-            ShellWatcherRenderPass(["cat", "./README.md"], 10, 300, 30),
+            ShellWatcherRenderPass(["vmstat"], 30, 10, 30),
+            ShellWatcherRenderPass(["cat", "./README.md"], 30, 10, 30),
             MouseDrawRenderPass(),
             TimerRenderPass(),
             RedDotDrawRenderPass(LineDrawer()),
@@ -159,7 +159,6 @@ class VideoProxy:
                         used_passes.append(output_render_pass.name())
 
                 # Printing active passes on the screen.
-                img = cv2.flip(img, 1)
                 for i, pass_name in enumerate(used_passes):
                     cv2.putText(
                         img,
@@ -170,8 +169,8 @@ class VideoProxy:
                         COLOR_WHITE,
                         2,
                     )
-                img = cv2.flip(img, 1)
 
+                img = cv2.flip(img, 1)
                 cam.send(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
                 cam.sleep_until_next_frame()
 
