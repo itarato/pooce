@@ -7,7 +7,7 @@ Video proxy learning project: a video output stream (~webcam) that is programmab
 ## Setup
 
 - Install [OBS studio](https://obsproject.com/) and enable the virtual camera
-- `python -m venv ./.venv`
+- `python3 -m venv ./.venv`
 - `. .venv/bin/activate`
 - `pip install -r requirements.txt`
 
