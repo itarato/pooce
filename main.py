@@ -5,6 +5,7 @@ import queue
 import time
 import signal
 import logging
+import threading
 
 from conf import *
 from shared import *
@@ -37,6 +38,28 @@ def sig_interrupt_handler(sig, frame):
     logging.info("Exiting Video Proxy")
 
     sys.exit(0)
+
+
+def window_thread(
+    event_queue: queue.Queue, output_render_passes: list[OutputRenderPass]
+):
+    ControlWindow(event_queue, output_render_passes).run()
+
+
+def start_window_thread(
+    event_queue: queue.Queue, output_render_passes: list[OutputRenderPass]
+) -> threading.Thread:
+    thread = threading.Thread(
+        target=window_thread,
+        args=(
+            event_queue,
+            output_render_passes,
+        ),
+    )
+    thread.daemon = True
+    thread.start()
+
+    return thread
 
 
 #
@@ -89,8 +112,9 @@ class VideoProxy:
         for i, render_pass in enumerate(self.output_render_passes):
             logging.info("Pass #" + str(i) + ": " + render_pass.name())
 
-        self.control_window = ControlWindow(self.event_queue)
-        self.control_window.start_window()
+        self.window_thread = start_window_thread(
+            self.event_queue, self.output_render_passes
+        )
 
     def img_size(self):
         return self.output_rect
@@ -111,8 +135,6 @@ class VideoProxy:
             logging.info(f"Using virtual camera: {cam.device}")
 
             while not global_exit_flag:
-                self.control_window.update_window()
-
                 # Read the system default (0) video stream frame.
                 rval, default_video = self.videoInputOriginal.read()
                 if not rval:
@@ -174,7 +196,7 @@ class VideoProxy:
                 cam.send(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
                 cam.sleep_until_next_frame()
 
-            self.control_window.finish_window()
+            self.window_thread.join()
 
 
 # CTRL-C handler.
