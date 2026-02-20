@@ -15,6 +15,11 @@ class ControlWindow:
         self.output_render_passes = output_render_passes
         self.render_pass_toggles = []
 
+    def render_pass_toggle_changed(self, index: int):
+        self.event_queue.put(
+            Event(ToggleEventData(index, self.render_pass_toggles[index].get() == 1))
+        )
+
     def run(self):
         root = tk.Tk()
 
@@ -33,11 +38,14 @@ class ControlWindow:
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
-        for render_pass in self.output_render_passes:
+        for i, render_pass in enumerate(self.output_render_passes):
             toggle_var = tk.IntVar()
             self.render_pass_toggles.append(toggle_var)
             tk.Checkbutton(
-                main_layout, text=render_pass.name(), variable=toggle_var
+                main_layout,
+                text=render_pass.name(),
+                variable=toggle_var,
+                command=lambda index=i: self.render_pass_toggle_changed(index),
             ).pack(pady=6, padx=6, anchor="w")
 
         root.mainloop()

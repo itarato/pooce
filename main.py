@@ -83,7 +83,7 @@ class VideoProxy:
     def __init__(self, env_config: EnvConfig, fps):
         logging.info("Video Proxy start")
 
-        self.event_queue = queue.Queue()
+        self.event_queue: queue.Queue[Event] = queue.Queue()
         self.env_config = env_config
         self.config = Config()
 
@@ -126,7 +126,7 @@ class VideoProxy:
         global global_exit_flag
         global background
 
-        output_render_pass_mask = 1
+        output_render_pass_toggles = [False] * len(self.output_render_passes)
         is_pip_mode = False
 
         with pyvirtualcam.Camera(
@@ -160,37 +160,15 @@ class VideoProxy:
                     event = self.event_queue.get()
                     events.append(event)
 
-                    # React on main app events (if there is any).
-                    key_code = event.key_code
-                    if key_code is not None and key_code > 0:
-                        if key_code == 45:  # Key: -
-                            output_render_pass_mask = OUTPUT_RENDER_PASS_MASK_ALL
-                        elif key_code == 96:  # Key: `
-                            output_render_pass_mask = OUTPUT_RENDER_PASS_MASK_NONE
-                        elif key_code >= 48 and key_code <= 57:  # Key: 0..9
-                            output_render_pass_mask ^= 1 << (key_code - 48)
-                        elif key_code == 112:  # Key: p
-                            is_pip_mode = not is_pip_mode
+                    if event.kind() == EVENT_KIND_TOGGLE_RENDER_PASS:
+                        output_render_pass_toggles[event.data.render_pass_index] = (
+                            event.data.is_on
+                        )
 
                 # Execute render passes.
-                used_passes = []
                 for i, output_render_pass in enumerate(self.output_render_passes):
-                    pass_mask = 1 << i
-                    if output_render_pass_mask & pass_mask > 0:
+                    if output_render_pass_toggles[i]:
                         img = output_render_pass.render(img, events, self.config)
-                        used_passes.append(output_render_pass.name())
-
-                # Printing active passes on the screen.
-                for i, pass_name in enumerate(used_passes):
-                    cv2.putText(
-                        img,
-                        pass_name,
-                        (self.width - 250, self.height - 20 - (i * 20)),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.5,
-                        COLOR_WHITE,
-                        2,
-                    )
 
                 img = cv2.flip(img, 1)
                 cam.send(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))

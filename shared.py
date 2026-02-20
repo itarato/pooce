@@ -4,24 +4,30 @@ import select
 
 from conf import *
 
+EVENT_KIND_MOUSE_MOVE = 0
+EVENT_KIND_MOUSE_CLICK = 1
+EVENT_KIND_KEY_PRESS = 2
+EVENT_KIND_TOGGLE_RENDER_PASS = 3
+
+
+class ToggleEventData:
+    def __init__(self, render_pass_index: int, is_on: bool):
+        self.render_pass_index = render_pass_index
+        self.is_on = is_on
+
 
 #
 # Event record for app level UI events.
 #
 class Event:
-    def __init__(self, mouse_pos=None, mouse_click=None, key_code=None):
-        self.mouse_pos = mouse_pos
-        self.mouse_click = mouse_click
-        self.key_code = key_code
+    def __init__(self, data):
+        self.data = data
 
-    def is_mouse_event(self):
-        return self.mouse_pos is not None
-    
-    def mouse_x_rel(self) -> float:
-        return self.mouse_pos[0] / OUT_WIDTH
-    
-    def mouse_y_rel(self) -> float:
-        return self.mouse_pos[1] / OUT_HEIGHT
+    def kind(self) -> int:
+        if isinstance(self.data, ToggleEventData):
+            return EVENT_KIND_TOGGLE_RENDER_PASS
+        else:
+            raise ValueError(f"Unknown event data type: {type(self.data)}")
 
 
 #
