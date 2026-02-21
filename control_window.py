@@ -50,7 +50,10 @@ class ControlWindow:
             ).pack(pady=6, padx=6, anchor="w")
 
             render_pass_frame = render_pass.gui_frame(main_layout)
-            render_pass_frame.pack(pady=6, padx=6, anchor="w")
+            # ensure the frame is stacked below the Checkbutton
+            render_pass_frame.pack(
+                side="top", fill="x", padx=6, pady=(0, 6), anchor="w"
+            )
 
             self.render_pass_frames.append(render_pass_frame)
 

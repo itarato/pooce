@@ -111,7 +111,7 @@ class OutputRenderPass:
     def gui_frame(self, parent):
         frame = tk.Frame(parent)
 
-        tk.Label(text="HELLO").pack(fill="x", pady=6)
+        tk.Label(frame, text="HELLO").pack(pady=6, side="top", anchor="w")
 
         return frame
 
