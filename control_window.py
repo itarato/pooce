@@ -14,6 +14,7 @@ class ControlWindow:
         self.event_queue = event_queue
         self.output_render_passes = output_render_passes
         self.render_pass_toggles = []
+        self.render_pass_frames = []
 
     def render_pass_toggle_changed(self, index: int):
         self.event_queue.put(
@@ -47,6 +48,11 @@ class ControlWindow:
                 variable=toggle_var,
                 command=lambda index=i: self.render_pass_toggle_changed(index),
             ).pack(pady=6, padx=6, anchor="w")
+
+            render_pass_frame = render_pass.gui_frame(main_layout)
+            render_pass_frame.pack(pady=6, padx=6, anchor="w")
+
+            self.render_pass_frames.append(render_pass_frame)
 
         root.mainloop()
 

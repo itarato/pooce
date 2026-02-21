@@ -1,7 +1,7 @@
 import cv2
 import sys
 import select
-
+import tkinter as tk
 from conf import *
 
 EVENT_KIND_MOUSE_MOVE = 0
@@ -107,6 +107,13 @@ class OutputRenderPass:
 
     def render(self, img, events):
         NotImplementedError("Must be implemented")
+
+    def gui_frame(self, parent):
+        frame = tk.Frame(parent)
+
+        tk.Label(text="HELLO").pack(fill="x", pady=6)
+
+        return frame
 
 
 def non_block_stdin_get_line():

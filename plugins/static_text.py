@@ -1,4 +1,5 @@
 import cv2
+import tkinter as tk
 from conf import *
 from shared import *
 
@@ -26,3 +27,5 @@ class StaticTextRenderPass(OutputRenderPass):
         )
 
         return img
+
+    # def gui_frame(self, parent):
