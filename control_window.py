@@ -14,7 +14,9 @@ class ControlWindow:
         self.event_queue = event_queue
         self.output_render_passes = output_render_passes
         self.render_pass_toggles = []
-        self.render_pass_frames = []
+        self.render_pass_anchors = []
+        self.render_pass_frames: list[tk.Frame] = []
+        self.main_layout = None
 
     def render_pass_toggle_changed(self, index: int):
         is_on = self.render_pass_toggles[index].get() == 1
@@ -22,7 +24,12 @@ class ControlWindow:
 
         if is_on:
             self.render_pass_frames[index].pack(
-                side="top", fill="x", padx=6, pady=(0, 6), anchor="w"
+                side="top",
+                fill="x",
+                padx=6,
+                pady=(0, 6),
+                anchor="w",
+                after=self.render_pass_anchors[index],
             )
         else:
             self.render_pass_frames[index].pack_forget()
@@ -34,12 +41,12 @@ class ControlWindow:
 
         scrollbar = tk.Scrollbar(root, orient="vertical", command=canvas.yview)
 
-        main_layout = tk.Frame(canvas)
-        main_layout.bind(
+        self.main_layout = tk.Frame(canvas)
+        self.main_layout.bind(
             "<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
         )
 
-        canvas.create_window((0, 0), window=main_layout, anchor="nw")
+        canvas.create_window((0, 0), window=self.main_layout, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
 
         canvas.pack(side="left", fill="both", expand=True)
@@ -48,20 +55,16 @@ class ControlWindow:
         for i, render_pass in enumerate(self.output_render_passes):
             toggle_var = tk.IntVar()
             self.render_pass_toggles.append(toggle_var)
-            tk.Checkbutton(
-                main_layout,
+            checkbutton = tk.Checkbutton(
+                self.main_layout,
                 text=render_pass.name(),
                 variable=toggle_var,
                 command=lambda index=i: self.render_pass_toggle_changed(index),
-            ).pack(pady=6, padx=6, anchor="w")
-
-            render_pass_frame_outer = tk.Frame(main_layout)
-            render_pass_frame_outer.pack(
-                side="top", fill="x", padx=6, pady=(0, 6), anchor="w"
             )
+            checkbutton.pack(pady=6, padx=6, anchor="w")
+            self.render_pass_anchors.append(checkbutton)
 
-            render_pass_frame = render_pass.gui_frame(render_pass_frame_outer)
-
+            render_pass_frame = render_pass.gui_frame(self.main_layout)
             self.render_pass_frames.append(render_pass_frame)
 
         root.mainloop()
