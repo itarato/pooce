@@ -17,9 +17,15 @@ class ControlWindow:
         self.render_pass_frames = []
 
     def render_pass_toggle_changed(self, index: int):
-        self.event_queue.put(
-            Event(ToggleEventData(index, self.render_pass_toggles[index].get() == 1))
-        )
+        is_on = self.render_pass_toggles[index].get() == 1
+        self.event_queue.put(Event(ToggleEventData(index, is_on)))
+
+        if is_on:
+            self.render_pass_frames[index].pack(
+                side="top", fill="x", padx=6, pady=(0, 6), anchor="w"
+            )
+        else:
+            self.render_pass_frames[index].pack_forget()
 
     def run(self):
         root = tk.Tk()
@@ -49,11 +55,12 @@ class ControlWindow:
                 command=lambda index=i: self.render_pass_toggle_changed(index),
             ).pack(pady=6, padx=6, anchor="w")
 
-            render_pass_frame = render_pass.gui_frame(main_layout)
-            # ensure the frame is stacked below the Checkbutton
-            render_pass_frame.pack(
+            render_pass_frame_outer = tk.Frame(main_layout)
+            render_pass_frame_outer.pack(
                 side="top", fill="x", padx=6, pady=(0, 6), anchor="w"
             )
+
+            render_pass_frame = render_pass.gui_frame(render_pass_frame_outer)
 
             self.render_pass_frames.append(render_pass_frame)
 
