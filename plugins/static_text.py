@@ -42,21 +42,23 @@ class StaticTextRenderPass(OutputRenderPass):
         self.var_posy = tk.IntVar(value=50)
         self.var_fontsize = tk.IntVar(value=10)
 
-        tk.Label(frame, text="Text:").pack(anchor="w")
-        tk.Entry(frame, textvariable=self.var_text).pack(
-            side="top", anchor="w", fill="x"
+        tk.Label(frame, text="Text:", width=14, anchor="e").grid(row=0, column=0)
+        tk.Entry(frame, width=40, textvariable=self.var_text).grid(row=0, column=1)
+        tk.Label(frame, text="X coordinate:", width=14, anchor="e").grid(
+            row=1, column=0
         )
-        tk.Label(frame, text="X coordinate:").pack(anchor="w")
-        tk.Scale(frame, variable=self.var_posx, orient="horizontal").pack(
-            side="top", anchor="w", fill="x"
+        tk.Scale(frame, variable=self.var_posx, orient="horizontal").grid(
+            row=1, column=1, sticky="ew"
         )
-        tk.Label(frame, text="Y coordinate:").pack(anchor="w")
-        tk.Scale(frame, variable=self.var_posy, orient="horizontal").pack(
-            side="top", anchor="w", fill="x"
+        tk.Label(frame, text="Y coordinate:", width=14, anchor="e").grid(
+            row=2, column=0
         )
-        tk.Label(frame, text="Font size:").pack(anchor="w")
-        tk.Scale(frame, variable=self.var_fontsize, orient="horizontal").pack(
-            side="top", anchor="w", fill="x"
+        tk.Scale(frame, variable=self.var_posy, orient="horizontal").grid(
+            row=2, column=1, sticky="ew"
+        )
+        tk.Label(frame, text="Font size:", width=14, anchor="e").grid(row=3, column=0)
+        tk.Scale(frame, variable=self.var_fontsize, orient="horizontal").grid(
+            row=3, column=1, sticky="ew"
         )
 
         return frame
